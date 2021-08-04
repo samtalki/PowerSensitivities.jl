@@ -1,3 +1,4 @@
+using Convex: norm_fro
 using Base: String
 using Convex 
 using Mosek
@@ -8,7 +9,7 @@ using LinearAlgebra
 
 solver = MosekSolver(LOG=1)
 
-function mat_complete(X,write_location::String)
+function mat_complete_model(X,write_location::String)
     model = Model(GLPK.Optimizer)
     set_time_limit_sec(model,60**2)
     n_measurements,n_locations = size(X)
@@ -16,9 +17,17 @@ function mat_complete(X,write_location::String)
     return model 
 end
 
-function cons_mat_complete(X,bounds,write_location::String)
-    model = mat_complete(X,write_location)
-    
+function cons_mat_complete_model(X,δ,β,g,write_location::String)
+    model = mat_complete_model(X,write_location)
+    @objective(model,Min,nuclearnorm(X)) #Minimize the nuclear norm
+    @constraint(model,data_con,norm(X_Ψ-M_Ψ)<=δ) #Least-squares sense constraint
+    @constraint(model,phys_con,norm(g(x))<=β) #System physics constraints
+    return model
+end
+
+function solve_model(model)
+    optimize!(model)
+    print(model)
 end
 
 function add_component_to_model(model::JuMP.Model)
