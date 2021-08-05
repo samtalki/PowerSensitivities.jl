@@ -6,7 +6,7 @@ using ForwardDiff
 
 DATA_DIR = download(PowerSystems.UtilsData.TestData, folder = pwd())
 
-function parse_network_model(DATA_DIR,system="matpower/case14.m")
+function parse_network_model(DATA_DIR,system="matpower/case5_re.m")
     system_data = System(joinpath(DATA_DIR,system))
     return system_data
 end
