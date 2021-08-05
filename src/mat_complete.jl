@@ -24,10 +24,15 @@ function cons_mat_complete_model(X,δ,β,g,write_location::String)
     @constraint(model,phys_con,norm(g(x))<=β) #System physics constraints
     return model
 end
+ 
 
-function solve_model(model)
+function solve_model(model,verbose=True)
     optimize!(model)
-    print(model)
+    if verbose
+        solution_summary(model)
+    else
+        print(model)
+    end
 end
 
 function add_component_to_model(model::JuMP.Model)
