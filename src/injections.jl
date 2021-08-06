@@ -1,6 +1,8 @@
 using PowerSystems
 using TimeSeries
 using Dates
+using DataFrames
+include("sensitivities.jl")
 
 function get_voltages(system_model::System=nothing)
     results = solve_powerflow(system_model)
@@ -34,17 +36,31 @@ function place_inj(P_inj::Float64,Q_inj::Float64,bus::Bus,name,system_model::Sys
        # time_series_container::InfrastructureSystems.TimeSeriesContainer
        # internal::InfrastructureSystemsInternal
     )
-    #load = PowerLoad(available=true,bus=bus,active_power=P_inj,reactive_power=Q_inj,name=name)
     add_component!(system_model,load)
     return load
+end
+
+function place_inj(P_inj::Float64,Q_inj::Float64,bus::Int,name::String,system_model::System)
+    load = PowerLoad(
+        name = name,
+        available = true,
+        bus = get_component(Bus,system_model, string(bus)),
+        model = LoadModels.ConstantPower,
+        active_power = P_inj,
+        reactive_power = Q_inj,
+        base_power = get_base_power(system_model),
+        max_active_power = P_inj,
+        max_reactive_power = Q_inj,
+    )
+    add_component!(system_model,load)
 end
 
 function remove_inj(load::PowerLoad,system_model::System)
     remove_component!(system_model,load)
 end
 
-function get_inj_voltages(inj_bus::Bus,range_P_inj::Vector,range_Q_inj::Vector,system_model)
-    """Gets the voltage mags for each measured bus for each value of the injection in inj_range at inj_bus"""
+function get_inj_range_voltages(inj_bus::Bus,range_P_inj::Vector,range_Q_inj::Vector,system_model)
+    """Gets the voltage mags for each measured bus for each value of the injection in P and Q inj_range at inj_bus"""
     voltages_per_inj = []
     for (idx,(P_inj,Q_inj)) in enumerate(zip(range_P_inj,range_Q_inj))
         println(string(idx),typeof(string(idx)))
@@ -56,11 +72,36 @@ function get_inj_voltages(inj_bus::Bus,range_P_inj::Vector,range_Q_inj::Vector,s
     return voltages_per_inj
 end
 
+function get_P_inj_voltages(inj_bus::Int,P_inj::Int64,system_model::System)
+    """Gets the vector of voltage magnitudes for an injection on bus num inj_bus of value P_inj"""
+    Q_inj = 0
+    load = place_inj(P_inj,Q_inj,)
+end
+
+
+function real_sensitivities(inj_range_matrix)
+    sensitivity_matrix = zeros(size(inj_range_matrix))
+    for (i,row) in enumerate(eachrow(inj_range_matrix))
+        
+    end
+end
+
 base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
 sys = System(joinpath(base_dir, "matpower/case14.m"));
-vmag_0 = get_voltages(sys);
-PQ_buses = get_PQ_buses(sys);
-inj_bus = PQ_buses[1];
-range_P_inj = [i for i in 0:0.01:0.9];
-range_Q_inj = [0.0 for i in 0:0.01:0.9];
-voltages_per_inj = get_inj_voltages(inj_bus,range_P_inj,range_Q_inj,sys);
+@time begin
+    vmag_0 = get_voltages(sys);
+    PQ_buses = get_PQ_buses(sys);
+    inj_bus = PQ_buses[1];
+    range_P_inj = [i for i in 0:0.001:1.0];
+    range_Q_inj = [0.0 for i in 0:0.001:1.0];
+    voltages_per_inj = get_inj_range_voltages(inj_bus,range_P_inj,range_Q_inj,sys);
+end
+
+#GSA Experiment (Sobol Indeces)
+@time begin
+    P_inj_min = 0.0001
+    P_inj_max = 0.5
+    P_inj_params = inj_range_matrix(P_inj_min,P_inj_max,length(PQ_buses))
+    #gsa_results = DataFrame(Inj_Bus = PQ_buses, inj_range = inj_range)
+    
+end
