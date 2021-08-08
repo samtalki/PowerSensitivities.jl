@@ -2,7 +2,10 @@ using PowerSystems
 using TimeSeries
 using Dates
 using DataFrames
-include("sensitivities.jl")
+using LinearAlgebra
+#using PowerSensitivities : inj_range_matrix
+#using PowerSensitivities : sensitivity_global
+#include("sensitivities.jl")
 
 function get_voltages(system_model::System=nothing)
     results = solve_powerflow(system_model)
@@ -40,11 +43,11 @@ function place_inj(P_inj::Float64,Q_inj::Float64,bus::Bus,name,system_model::Sys
     return load
 end
 
-function place_inj(P_inj::Float64,Q_inj::Float64,bus::Int,name::String,system_model::System)
+function place_inj(P_inj::Float64,Q_inj::Float64,inj_bus::Int,name::String,system_model::System)
     load = PowerLoad(
         name = name,
         available = true,
-        bus = get_component(Bus,system_model, string(bus)),
+        bus = get_component(Bus,system_model, string(inj_bus)),
         model = LoadModels.ConstantPower,
         active_power = P_inj,
         reactive_power = Q_inj,
@@ -75,16 +78,40 @@ end
 function get_P_inj_voltages(inj_bus::Int,P_inj::Int64,system_model::System)
     """Gets the vector of voltage magnitudes for an injection on bus num inj_bus of value P_inj"""
     Q_inj = 0
-    load = place_inj(P_inj,Q_inj,)
+    load = place_inj(P_inj,Q_inj,inj_bus,"Inj "+string(inj_bus),system_model)
+    voltages = get_voltages(system_model)
+    remove_inj(load,system_model)
+    return voltages
 end
 
 
-function real_sensitivities(inj_range_matrix)
-    sensitivity_matrix = zeros(size(inj_range_matrix))
-    for (i,row) in enumerate(eachrow(inj_range_matrix))
-        
+function get_P_voltage_matrix(inj_matrix)
+    voltage_matrix = zeros(size(inj_matrix))
+    for (i,row) in enumerate(eachrow(inj_matrix))
+        voltage_matrix[i,!] = get_P_inj_voltages(i,row[i],sys)
     end
+    return voltage_matrix
 end
+
+
+
+function inj_range_matrix(inj_min::Float64,inj_max::Float64,n_injections::Float64)
+    A = Array{Tuple{Float64,Float64}}(undef,n_injections,n_injections)
+    #!fill(A,(0,0))
+    #A = Array{Tuple}(nothing,n_injections,n_injections)
+    for (i,col) in enumerate(A)
+       col[i] = (inj_min,inj_max) 
+    end
+    return A
+    #Diagonal([(inj_min,inj_max) for i in 1:n_injections])
+end
+
+function sensitivity_global(inj_range_matrix,f_v=get_inj_voltages,method=Sobol,order=2,N=1000)
+    """Numeric global sensitivities for a single inj_bus"""
+    sens = gsa(f_v,method,inj_range_matrix; N, batch=false,order=order)
+    return sens
+end
+
 
 base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
 sys = System(joinpath(base_dir, "matpower/case14.m"));
@@ -103,5 +130,5 @@ end
     P_inj_max = 0.5
     P_inj_params = inj_range_matrix(P_inj_min,P_inj_max,length(PQ_buses))
     #gsa_results = DataFrame(Inj_Bus = PQ_buses, inj_range = inj_range)
-    
 end
+
