@@ -95,12 +95,17 @@ end
 
 
 
-function inj_range_matrix(inj_min::Float64,inj_max::Float64,n_injections::Float64)
-    A = Array{Tuple{Float64,Float64}}(undef,n_injections,n_injections)
+function inj_range_matrix(inj_min::Float64,inj_max::Float64,n_injections)
+    #A = Array{Tuple{Float64,Float64}}(undef,n_injections,n_injections)
+    A = map(tuple, (0.0 for i=1:n_injections,j=1:n_injections),zeros(n_injections,n_injections))
+
     #!fill(A,(0,0))
     #A = Array{Tuple}(nothing,n_injections,n_injections)
-    for (i,col) in enumerate(A)
-       col[i] = (inj_min,inj_max) 
+    for i=1:n_injections,j=1:n_injections
+        if i==j
+            print(i,j)
+            A[i,j] = (inj_min,inj_max) 
+        end
     end
     return A
     #Diagonal([(inj_min,inj_max) for i in 1:n_injections])
