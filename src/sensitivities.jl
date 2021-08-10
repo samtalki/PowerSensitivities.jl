@@ -36,7 +36,7 @@ function sensitivity_mat_analytic(sensors,injections,system_data::System)
     ybus = Ybus(system_data)
 end
 
-function sensitivity_global(inj_range_matrix,f_v=get_inj_voltages,method=Sobol,order=2,N=1000)
+function sensitivity_global(inj_range_matrix,f_v=get_inj_range_voltages,method=Sobol,order=2,N=1000)
     """Numeric global sensitivities for a single inj_bus"""
     sens = gsa(f_v,method,inj_range_matrix; N, batch=false,order=order)
     return sens

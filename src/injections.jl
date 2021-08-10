@@ -3,6 +3,8 @@ using TimeSeries
 using Dates
 using DataFrames
 using LinearAlgebra
+using GlobalSensitivity
+using QuasiMonteCarlo
 #using PowerSensitivities : inj_range_matrix
 #using PowerSensitivities : sensitivity_global
 #include("sensitivities.jl")
@@ -108,11 +110,14 @@ function inj_range_matrix(inj_min,inj_max,n_injections)
     #Diagonal([(inj_min,inj_max) for i in 1:n_injections])
 end
 
-function sensitivity_global(inj_range_matrix,f_v=get_inj_voltages,method=Sobol,order=2,N=1000)
+function sensitivity_global(inj_range_matrix,f_v=get_inj_range_voltages,method=Sobol(),order=2,N=1000,batch=true,
+                            nboot=100,conf_int=0.95)
     """Numeric global sensitivities for a single inj_bus"""
-    sens = gsa(f_v,method,inj_range_matrix; N, batch=false,order=order)
+    sens = GlobalSensitivity.gsa(f_v,method,inj_range_matrix; N, batch=batch,order=order,nboot=nboot,conf_int=conf_int)
     return sens
 end
+
+#function sobol_design_matrices(n)
 
 
 base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
@@ -132,6 +137,7 @@ P_inj_min = 0.0001
 P_inj_max = 0.5
 println(P_inj_min,P_inj_max)
 P_inj_params = inj_range_matrix(P_inj_min,P_inj_max,length(PQ_buses))
+sens = sensitivity_global(P_inj_params)
 #gsa_results = DataFrame(Inj_Bus = PQ_buses, inj_range = inj_range)
 
 
