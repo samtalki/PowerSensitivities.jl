@@ -11,7 +11,7 @@ solver = MosekSolver(LOG=1)
 
 function mat_complete_model(X,write_location::String)
     model = Model(GLPK.Optimizer)
-    set_time_limit_sec(model,60**2)
+    set_time_limit_sec(model,60^2)
     n_measurements,n_locations = size(X)
     @variable(model,x[1:n_measurements,1:n_locations])
     return model 

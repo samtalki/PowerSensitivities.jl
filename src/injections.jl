@@ -95,15 +95,12 @@ end
 
 
 
-function inj_range_matrix(inj_min::Float64,inj_max::Float64,n_injections)
-    #A = Array{Tuple{Float64,Float64}}(undef,n_injections,n_injections)
+function inj_range_matrix(inj_min,inj_max,n_injections)
+    println("entered inj_range_matrix")
     A = map(tuple, (0.0 for i=1:n_injections,j=1:n_injections),zeros(n_injections,n_injections))
-
-    #!fill(A,(0,0))
-    #A = Array{Tuple}(nothing,n_injections,n_injections)
     for i=1:n_injections,j=1:n_injections
         if i==j
-            print(i,j)
+            #println(i,j)
             A[i,j] = (inj_min,inj_max) 
         end
     end
@@ -130,10 +127,11 @@ sys = System(joinpath(base_dir, "matpower/case14.m"));
 end
 
 #GSA Experiment (Sobol Indeces)
-@time begin
-    P_inj_min = 0.0001
-    P_inj_max = 0.5
-    P_inj_params = inj_range_matrix(P_inj_min,P_inj_max,length(PQ_buses))
-    #gsa_results = DataFrame(Inj_Bus = PQ_buses, inj_range = inj_range)
-end
+
+P_inj_min = 0.0001
+P_inj_max = 0.5
+println(P_inj_min,P_inj_max)
+P_inj_params = inj_range_matrix(P_inj_min,P_inj_max,length(PQ_buses))
+#gsa_results = DataFrame(Inj_Bus = PQ_buses, inj_range = inj_range)
+
 
