@@ -4,8 +4,8 @@ using PowerSystems
 using TimeSeries
 using Dates
 using ForwardDiff
-using DiffEqSensitivity
-include("injections.jl")
+using GlobalSensitivity
+using QuasiMonteCarlo
 
 DATA_DIR = download(PowerSystems.UtilsData.TestData, folder = pwd())
 
