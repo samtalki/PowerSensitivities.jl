@@ -1,5 +1,4 @@
 using Dates: include
-using Core: Vector
 using PowerSystems
 using TimeSeries
 using Dates
@@ -42,16 +41,11 @@ function sensitivity_global(inj_range_matrix,f_v=get_inj_range_voltages,method=S
     return sens
 end
 
-
-
 function sensitivity_diffeq(sensors,injections,system_data::System)
     """Solves with DifferentialEquations.jl"""
     1+2
 end
 
-function sensitivity_perturb()
-
-end
 
 function installed_capacity(system::System; technology::Type{T} = Generator) where T <: Generator
     installed_capacity = 0.0

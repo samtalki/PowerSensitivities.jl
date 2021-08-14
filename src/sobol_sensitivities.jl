@@ -4,15 +4,17 @@ using QuasiMonteCarlo
 include("injections.jl")
 
 function make_sobol_sens_matrix(inj_range::Tuple,L_nodes::Int64,inj_type::String;
-    N_simulation::Int64=1000,order::Vector=[0,1,2],n_boot::Int64=100,conf_int::Float64=0.95)
+    N_simulations::Int64=1000,order::Vector=[0,1,2],n_boot::Int64=100,conf_int::Float64=0.95)
     #Matrix whose rows are a vector with L entries, with only one nonzero element containing tuples for the bus to be measured
     param_range_matrix = inj_range_matrix(inj_range[0],inj_range[1],L_nodes)
     for row in eachrow(param_range_matrix)
         param_range = Vector(row)
         if(occursin("p",inj_type) || occursin("P",inj_type))
-            results = make_sobol_sens_vector(param_range,get_P_inj_voltages;param_range,get_Q_inj_voltages,N_simulations;order=order,n_boot=n_boot,conf_int=conf_int)
-        else if occursin("q",inj_type) || occursin("Q",inj_type)
-            results = make_sobol_sens_vector(param_range,get_Q_inj_voltages,N_simulations;order=order,n_boot=n_boot,conf_int=conf_int)
+            results = make_sobol_sens_vector(param_range,get_P_inj_voltages,N_simulations;
+            order=order,n_boot=n_boot,conf_int=conf_int)
+        elseif occursin("q",inj_type) || occursin("Q",inj_type)
+            results = make_sobol_sens_vector(param_range,get_Q_inj_voltages,N_simulations;
+            order=order,n_boot=n_boot,conf_int=conf_int)
         end
     end
     return sensitivity_matrix

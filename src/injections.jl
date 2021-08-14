@@ -96,7 +96,7 @@ function get_inj_voltages(injection::RealPerturb;system::System=system_model)
     for (inj_bus,inj) in enumerate(injection.inj_state)
         if(inj == 0)
             continue
-        else if inj != 0
+        elseif inj != 0
             println("P Inj: ",string(inj),"On bus: ",string(inj_bus))
             voltages = get_P_inj_voltages(inj_bus,inj,system)
         end
@@ -113,7 +113,7 @@ function get_inj_voltages(injection::ReactivePerturb;system::System=system_model
     for (inj_bus,inj) in enumerate(injection.inj_state)
         if(inj == 0)
             continue
-        else if inj != 0
+        elseif inj != 0
             println("Q Inj: ",string(inj),"On bus: ",string(inj_bus))
             voltages = get_Q_inj_voltages(inj_bus,inj,system)
         end
