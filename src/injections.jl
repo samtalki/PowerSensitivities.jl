@@ -12,82 +12,6 @@ mutable struct ReactivePerturb
     inj_state::Vector
 end
 
-
-function set_system_model(system_model::System)
-    """Sets the global system model parameters"""
-    if(system_model !== nothing)
-        println("Setting global system model")
-        global system_model = model
-    end
-end
-
-function check_system_model(modelx::System)
-    if(system_model !== nothing) && (modelx==system_model)
-        println("Global System model PASSED")
-    else
-        set_system_model(modelx)
-    end
-end
-
-function get_PQ_buses(sys::System)
-    buses = collect(get_components(Bus,sys))
-    PQ_buses = [bus for bus in buses if get_bustype(bus) == BusTypes.PQ]
-    return PQ_buses
-end
-
-function get_voltages(system_model::System=system_model)
-    results = solve_powerflow(system_model)
-    return results["bus_results"][!,"Vm"]
-end
-
-function get_voltages(bus_results::DataFrame)
-    return bus_results["Vm"]
-end
-
-function place_inj(P_inj::Float64,Q_inj::Float64,bus::Bus,name::String;
-    system::System=system_model)
-    check_system_model(system)
-    load = PowerLoad(
-        name = name,
-        available = true,
-        bus = bus,
-        model = LoadModels.ConstantPower,
-        active_power = P_inj,
-        reactive_power = Q_inj,
-        base_power = get_base_power(system_model),
-        max_active_power = P_inj,
-        max_reactive_power = Q_inj,
-        #services = Vector{Service}
-       # dynamic_injector::Union{Nothing, DynamicInjection}
-       # ext::Dict{String, Any}
-       # time_series_container::InfrastructureSystems.TimeSeriesContainer
-       # internal::InfrastructureSystemsInternal
-    )
-    add_component!(system_model,load)
-    return load
-end
-
-function place_inj(P_inj::Float64,Q_inj::Float64,inj_bus::Int,name::String;
-    system::System=system_model)
-    check_system_model(system)
-    load = PowerLoad(
-        name = name,
-        available = true,
-        bus = get_component(Bus,system_model, string(inj_bus)),
-        model = LoadModels.ConstantPower,
-        active_power = P_inj,
-        reactive_power = Q_inj,
-        base_power = get_base_power(system_model),
-        max_active_power = P_inj,
-        max_reactive_power = Q_inj,
-    )
-    add_component!(system_model,load)
-end
-
-function remove_inj(load::PowerLoad,system_model::System)
-    remove_component!(system_model,load)
-end
-
 function get_inj_voltages(injection::RealPerturb;system::System=system_model)
     """
     Gets a vector of voltage measurements for a real power injection state vector ∈ R^L
@@ -122,7 +46,94 @@ function get_inj_voltages(injection::ReactivePerturb;system::System=system_model
 end
 
 
-function get_p_inj_voltages(inj_bus::Int,P_inj::Int64,system_model::System)
+
+base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
+global system_model = System(joinpath(base_dir, "matpower/case14.m"));
+global PQ_buses = get_PQ_buses(sys);
+
+
+function set_system_model(system_model::System)
+    """Sets the global system model parameters"""
+    if(system_model !== nothing)
+        println("Setting global system model")
+        global system_model = model
+    end
+end
+
+function check_system_model(modelx::System)
+    if(system_model !== nothing) && (modelx==system_model)
+        println("Global System model PASSED")
+    else
+        set_system_model(modelx)
+    end
+end
+
+function get_PQ_buses(sys::System)
+    buses = collect(get_components(Bus,sys))
+    PQ_buses = [bus for bus in buses if get_bustype(bus) == BusTypes.PQ]
+    return PQ_buses
+end
+
+function get_voltages(system_model::System=system_model)
+    results = solve_powerflow(system_model)
+    return results["bus_results"][!,"Vm"]
+end
+
+function get_voltages(bus_results::DataFrame)
+    return bus_results["Vm"]
+end
+
+
+
+
+function place_inj(P_inj::Float64,Q_inj::Float64,bus::Bus,name::String;system::System=system_model)
+    check_system_model(system)
+    load = PowerLoad(
+        name = name,
+        available = true,
+        bus = bus,
+        model = LoadModels.ConstantPower,
+        active_power = P_inj,
+        reactive_power = Q_inj,
+        base_power = get_base_power(system_model),
+        max_active_power = P_inj,
+        max_reactive_power = Q_inj,
+        #services = Vector{Service}
+       # dynamic_injector::Union{Nothing, DynamicInjection}
+       # ext::Dict{String, Any}
+       # time_series_container::InfrastructureSystems.TimeSeriesContainer
+       # internal::InfrastructureSystemsInternal
+    )
+    add_component!(system_model,load)
+    return load
+end
+
+
+function place_inj(P_inj::Float64,Q_inj::Float64,inj_bus::Int,name::String;system::System=system_model)
+    check_system_model(system)
+    load = PowerLoad(
+        name = name,
+        available = true,
+        bus = collect(get_components(Bus,system_model))[inj_bus],
+        model = LoadModels.ConstantPower,
+        active_power = P_inj,
+        reactive_power = Q_inj,
+        base_power = get_base_power(system_model),
+        max_active_power = P_inj,
+        max_reactive_power = Q_inj,
+    )
+    add_component!(system_model,load)
+    return load
+end
+
+function remove_inj(load::PowerLoad,system_model::System)
+    remove_component!(system_model,load)
+end
+
+
+
+
+function get_p_inj_voltages(inj_bus::Int,P_inj::Int64;system_model::System=system_model)
     """Gets the vector of voltage magnitudes for an injection on bus num inj_bus of value P_inj"""
     Q_inj = 0.0
     load = place_inj(P_inj,Q_inj,inj_bus,string(inj_bus),system=system_model)
@@ -140,7 +151,7 @@ function get_p_inj_voltages_by_bus(p_inj_by_bus::Vector{Float64};system_model=sy
     for (inj_bus,p_inj) in enumerate(p_inj_by_bus)
         println(inj_bus,p_inj)
         load = place_inj(p_inj,q_inj,inj_bus,string(inj_bus),system=system_model)
-        push!(load,loads)
+        push!(loads,load)
     end
     voltages = get_voltages(system_model)
     for load in loads
@@ -199,10 +210,6 @@ function inj_range_matrix(inj_min,inj_max,n_injections)
     #Diagonal([(inj_min,inj_max) for i in 1:n_injections])
 end
 
-
-base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
-global system_model = System(joinpath(base_dir, "matpower/case14.m"));
-global PQ_buses = get_PQ_buses(sys);
 
 # run_1 = false
 # if run_1
