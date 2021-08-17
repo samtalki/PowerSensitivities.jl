@@ -47,9 +47,6 @@ end
 
 
 
-base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
-global system_model = System(joinpath(base_dir, "matpower/case14.m"));
-global PQ_buses = get_PQ_buses(sys);
 
 
 function set_system_model(system_model::System)
@@ -74,13 +71,30 @@ function get_PQ_buses(sys::System)
     return PQ_buses
 end
 
-function get_voltages(system_model::System=system_model)
+function get_voltage_phasors_rectangular(system_model::System=system_model)
+    results = solve_powerflow(system_model)
+    Vm = results["bus_results"][!,"Vm"]
+    θ = results["bus_results"][!,"θ"]
+    results["bus_results"][!,"Vph"] = get_rectangular_from_phasor(Vm,θ)
+    return results["bus_results"][!,"Vph"]
+end
+
+function get_rectangular_from_phasor(Vm,θ)
+    return Vm*(cos(θ)+im*sin(θ))
+end
+
+function get_rectangular_from_phasor(Vm::AbstractArray,θ::AbstractArray)
+    n = length(Vm)
+    return [Vm[i]*(cos(θ[i])+im*sin(θ[i])) for i in 1:n]
+end
+
+function get_voltage_magnitudes(system_model::System=system_model)
     results = solve_powerflow(system_model)
     return results["bus_results"][!,"Vm"]
 end
 
-function get_voltages(bus_results::DataFrame)
-    return bus_results["Vm"]
+function get_voltage_magnitudes(bus_results::DataFrame)
+    return bus_results[!,"Vm"]
 end
 
 
@@ -137,7 +151,7 @@ function get_p_inj_voltages(inj_bus::Int,P_inj::Int64;system_model::System=syste
     """Gets the vector of voltage magnitudes for an injection on bus num inj_bus of value P_inj"""
     Q_inj = 0.0
     load = place_inj(P_inj,Q_inj,inj_bus,string(inj_bus),system=system_model)
-    voltages = get_voltages(system_model)
+    voltages = get_voltage_magnitudes(system_model)
     remove_inj(load,system_model)
     return voltages
 end
@@ -153,7 +167,7 @@ function get_p_inj_voltages_by_bus(p_inj_by_bus::Vector{Float64};system_model=sy
         load = place_inj(p_inj,q_inj,inj_bus,string(inj_bus),system=system_model)
         push!(loads,load)
     end
-    voltages = get_voltages(system_model)
+    voltages = get_voltage_magnitudes(system_model)
     for load in loads
         remove_inj(load,system_model)
     end
@@ -167,7 +181,7 @@ function get_q_inj_voltages(inj_bus::Int,Q_inj::Int64,system_model::System)
     """Gets the vector of voltage magnitudes for an injection on bus num inj_bus of value P_inj"""
     P_inj = 0
     load = place_inj(P_inj,Q_inj,inj_bus,string(inj_bus),system=system_model)
-    voltages = get_voltages(system_model)
+    voltages = get_voltage_magnitudes(system_model)
     remove_inj(load,system_model)
     return voltages
 end
@@ -180,7 +194,7 @@ function get_inj_range_voltages(inj_bus::Bus,range_P_inj::Vector,range_Q_inj::Ve
     for (idx,(P_inj,Q_inj)) in enumerate(zip(range_P_inj,range_Q_inj))
         println(string(idx),typeof(string(idx)))
         load = place_inj(P_inj,Q_inj,inj_bus,string(idx),system=system_model)
-        voltages = get_voltages(system_model)
+        voltages = get_voltage_magnitudes(system_model)
         remove_inj(load,system_model)
         push!(voltages_per_inj,voltages)
     end
@@ -211,10 +225,13 @@ function inj_range_matrix(inj_min,inj_max,n_injections)
 end
 
 
+base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
+global system_model = System(joinpath(base_dir, "matpower/case14.m"));
+global PQ_buses = get_PQ_buses(system_model);
 # run_1 = false
 # if run_1
 #     @time begin
-#         vmag_0 = get_voltages(sys);        
+#         vmag_0 = get_voltage_magnitudes(sys);        
 #         inj_bus = PQ_buses[1];
 #         range_P_inj = [i for i in 0:0.001:1.0];
 #         range_Q_inj = [0.0 for i in 0:0.001:1.0];
