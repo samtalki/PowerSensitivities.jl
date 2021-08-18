@@ -1,6 +1,7 @@
 using PowerSystems
 using LinearAlgebra
 using DifferentialEquations
+using DataFrames
 
 mutable struct LinearSensitivityModel
     system_model::System
@@ -8,6 +9,7 @@ mutable struct LinearSensitivityModel
     slack_buses::AbstractArray
     ybus::AbstractArray
     vph_0::AbstractArray
+    powerflow_results::AbstractArray
 end
 
 
@@ -15,8 +17,9 @@ function LinearSensitivityModel(system_model::System)
     pq_buses = get_pq_buses(system_model)
     slack_buses = get_slack_buses(system_model)
     ybus = Ybus(system_model).data
-    vph_0 = get_voltage_phasors_rectangular(system_model)
-    return LinearSensitivityModel(system_model,pq_buses,slack_buses,ybus,vph_0)
+    results = solve_powerflow(system_model)
+    vph_0 = get_voltage_phasors_rectangular(results)
+    return LinearSensitivityModel(system_model,pq_buses,slack_buses,ybus,vph_0,results)
 end
 
 function vph_p_sens(ℓ::Int64,model::LinearSensitivityModel)

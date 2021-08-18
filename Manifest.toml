@@ -600,6 +600,12 @@ git-tree-sha1 = "f5fc07d4e706b84f72d54eedcc1c13d92fb0871c"
 uuid = "d25df0c9-e2be-5dd7-82c8-3ad0b3e990b9"
 version = "0.1.2"
 
+[[InfrastructureModels]]
+deps = ["JuMP", "MathOptInterface", "Memento"]
+git-tree-sha1 = "14ad999045d7ea263cb909b1942814850227d457"
+uuid = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
+version = "0.6.1"
+
 [[InfrastructureSystems]]
 deps = ["CSV", "DataFrames", "DataStructures", "Dates", "DocStringExtensions", "HDF5", "InteractiveUtils", "JSON3", "Logging", "Mustache", "Pkg", "PrettyTables", "Random", "TOML", "Test", "TimeSeries", "UUIDs", "YAML"]
 git-tree-sha1 = "0c19c353e79e79b0fd53c0a6c6c9789b476e1e5f"
@@ -954,6 +960,12 @@ git-tree-sha1 = "75a54abd10709c01f1b86b84ec225d26e840ed58"
 uuid = "e89f7d12-3494-54d1-8411-f7d8b9ae1f27"
 version = "0.5.0"
 
+[[Memento]]
+deps = ["Dates", "Distributed", "JSON", "Serialization", "Sockets", "Syslogs", "Test", "TimeZones", "UUIDs"]
+git-tree-sha1 = "19650888f97362a2ae6c84f0f5f6cda84c30ac38"
+uuid = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
+version = "1.2.0"
+
 [[Missings]]
 deps = ["DataAPI"]
 git-tree-sha1 = "4ea90bd5d3985ae1f9a908bd4500ae88921c5ce7"
@@ -962,6 +974,12 @@ version = "1.0.0"
 
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+
+[[Mocking]]
+deps = ["ExprTools"]
+git-tree-sha1 = "748f6e1e4de814b101911e64cc12d83a6af66782"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.7.2"
 
 [[ModelingToolkit]]
 deps = ["AbstractTrees", "ArrayInterface", "ConstructionBase", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DiffEqJump", "DiffRules", "Distributed", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "InteractiveUtils", "JuliaFormatter", "LabelledArrays", "Latexify", "Libdl", "LightGraphs", "LinearAlgebra", "MacroTools", "NaNMath", "NonlinearSolve", "RecursiveArrayTools", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SafeTestsets", "SciMLBase", "Serialization", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "Symbolics", "UnPack", "Unitful"]
@@ -1177,6 +1195,12 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "17275485f373e6673f7e7f97051f703ed5b15b20"
 uuid = "85a6dd25-e78a-55b7-8502-1745935b8125"
 version = "0.2.4"
+
+[[PowerModels]]
+deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "Memento", "NLsolve", "SparseArrays"]
+git-tree-sha1 = "4df3b3fcc0fa188250151a897ea51676a6d97dc5"
+uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
+version = "0.18.2"
 
 [[PowerSystems]]
 deps = ["CSV", "DataFrames", "Dates", "DocStringExtensions", "InfrastructureSystems", "InteractiveUtils", "JSON3", "LinearAlgebra", "Logging", "NLsolve", "SparseArrays", "TimeSeries", "UUIDs", "YAML"]
@@ -1502,6 +1526,12 @@ git-tree-sha1 = "6a7d84c33afd675e63f55f6c8859d169b1887c85"
 uuid = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 version = "3.0.0"
 
+[[Syslogs]]
+deps = ["Printf", "Sockets"]
+git-tree-sha1 = "46badfcc7c6e74535cc7d833a91f4ac4f805f86d"
+uuid = "cea106d9-e007-5e6c-ad93-58fe2094e9c4"
+version = "0.3.0"
+
 [[TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
@@ -1537,6 +1567,12 @@ deps = ["Dates", "DelimitedFiles", "DocStringExtensions", "RecipesBase", "Reexpo
 git-tree-sha1 = "f0e4c7867c5a1a9df186a3c092c08d4fe9638de6"
 uuid = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 version = "0.22.1"
+
+[[TimeZones]]
+deps = ["Dates", "Future", "LazyArtifacts", "Mocking", "Pkg", "Printf", "RecipesBase", "Serialization", "Unicode"]
+git-tree-sha1 = "81753f400872e5074768c9a77d4c44e70d409ef0"
+uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+version = "1.5.6"
 
 [[TimerOutputs]]
 deps = ["ExprTools", "Printf"]
