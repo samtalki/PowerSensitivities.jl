@@ -71,6 +71,7 @@ function get_PQ_buses(sys::System)
     return PQ_buses
 end
 
+#Get voltage phasors from all observable buses in system
 function get_voltage_phasors_rectangular(system_model::System=system_model)
     results = solve_powerflow(system_model)
     Vm = results["bus_results"][!,"Vm"]
@@ -79,6 +80,25 @@ function get_voltage_phasors_rectangular(system_model::System=system_model)
     return results["bus_results"][!,"Vph"]
 end
 
+function get_voltage_phasors_rectangular(results::Dict)
+    Vm = results["bus_results"][!,"Vm"]
+    θ = results["bus_results"][!,"θ"]
+    results["bus_results"][!,"Vph"] = get_rectangular_from_phasor(Vm,θ)
+    return results["bus_results"][!,"Vph"]
+end
+
+#Get voltage magnitudes from all observable buses in system
+function get_voltage_magnitudes(system_model::System=system_model)
+    results = solve_powerflow(system_model)
+    return results["bus_results"][!,"Vm"]
+end
+
+#Get voltage magnitudes from all observable buses in system
+function get_voltage_magnitudes(bus_results::DataFrame)
+    return bus_results[!,"Vm"]
+end
+
+#Convert phasors to rectangular
 function get_rectangular_from_phasor(Vm,θ)
     return Vm*(cos(θ)+im*sin(θ))
 end
@@ -86,15 +106,6 @@ end
 function get_rectangular_from_phasor(Vm::AbstractArray,θ::AbstractArray)
     n = length(Vm)
     return [Vm[i]*(cos(θ[i])+im*sin(θ[i])) for i in 1:n]
-end
-
-function get_voltage_magnitudes(system_model::System=system_model)
-    results = solve_powerflow(system_model)
-    return results["bus_results"][!,"Vm"]
-end
-
-function get_voltage_magnitudes(bus_results::DataFrame)
-    return bus_results[!,"Vm"]
 end
 
 
@@ -226,8 +237,10 @@ end
 
 
 base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
-global system_model = System(joinpath(base_dir, "matpower/case14.m"));
-global PQ_buses = get_PQ_buses(system_model);
+if !@isdefined(system_model)
+    global system_model = System(joinpath(base_dir, "matpower/case14.m"));
+    global PQ_buses = get_PQ_buses(system_model);
+end
 # run_1 = false
 # if run_1
 #     @time begin
