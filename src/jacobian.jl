@@ -1,3 +1,4 @@
+import SparseArrays: findnz,sparse
 """
 Computes the jacobian submatrices
 H = dP/dδ

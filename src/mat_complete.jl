@@ -1,11 +1,6 @@
-using Convex: norm_fro
-using Base: String
 using Convex 
 using Mosek
 using JuMP
-using GLPK
-using LinearAlgebra
-
 
 solver = MosekSolver(LOG=1)
 

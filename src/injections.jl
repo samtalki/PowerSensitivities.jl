@@ -1,17 +1,3 @@
-using PowerSystems
-using TimeSeries
-using Dates
-using DataFrames
-using LinearAlgebra
-
-mutable struct RealPerturb
-    inj_state::Vector
-end
-
-mutable struct ReactivePerturb
-    inj_state::Vector
-end
-
 function get_inj_voltages(injection::RealPerturb;system::System=system_model)
     """
     Gets a vector of voltage measurements for a real power injection state vector ∈ R^L
@@ -22,7 +8,7 @@ function get_inj_voltages(injection::RealPerturb;system::System=system_model)
             continue
         elseif inj != 0
             println("P Inj: ",string(inj),"On bus: ",string(inj_bus))
-            voltages = get_p_inj_voltages(inj_bus,inj,system)
+            voltages = get_p_inj_voltages(inj_bus,inj,system_model=system)
         end
     end
     return voltages
@@ -43,26 +29,6 @@ function get_inj_voltages(injection::ReactivePerturb;system::System=system_model
         end
     end
     return voltages
-end
-
-
-
-
-
-function set_system_model(system_model::System)
-    """Sets the global system model parameters"""
-    if(system_model !== nothing)
-        println("Setting global system model")
-        global system_model = model
-    end
-end
-
-function check_system_model(modelx::System)
-    if(system_model !== nothing) && (modelx==system_model)
-        println("Global System model PASSED")
-    else
-        set_system_model(modelx)
-    end
 end
 
 function get_PQ_buses(sys::System)
@@ -158,7 +124,7 @@ end
 
 
 
-function get_p_inj_voltages(inj_bus::Int,P_inj::Int64;system_model::System=system_model)
+function get_p_inj_voltages(inj_bus::Number,P_inj::Number;system_model::System=system_model)
     """Gets the vector of voltage magnitudes for an injection on bus num inj_bus of value P_inj"""
     Q_inj = 0.0
     load = place_inj(P_inj,Q_inj,inj_bus,string(inj_bus),system=system_model)
@@ -236,11 +202,6 @@ function inj_range_matrix(inj_min,inj_max,n_injections)
 end
 
 
-base_dir = PowerSystems.download(PowerSystems.TestData; branch = "master");
-if !@isdefined(system_model)
-    global system_model = System(joinpath(base_dir, "matpower/case14.m"));
-    global PQ_buses = get_PQ_buses(system_model);
-end
 # run_1 = false
 # if run_1
 #     @time begin

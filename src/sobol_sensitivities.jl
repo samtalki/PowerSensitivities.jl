@@ -1,8 +1,3 @@
-using Base: Bool, Int64
-using GlobalSensitivity
-using QuasiMonteCarlo
-include("injections.jl")
-
 function make_sobol_sens_matrix(inj_range::Tuple,L_nodes::Int64,inj_type::String;
     N_simulations::Int64=1000,order::Vector=[0,1,2],n_boot::Int64=100,conf_int::Float64=0.95)
     #Matrix whose rows are a vector with L entries, with only one nonzero element containing tuples for the bus to be measured
