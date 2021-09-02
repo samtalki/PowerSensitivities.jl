@@ -34,8 +34,9 @@ mutable struct ReactivePerturb
     inj_state::AbstractArray
 end
 
+abstract type SensitivityModel end
 #General sensitivity model
-mutable struct LinearSensitivityModel
+mutable struct LinearSensitivityModel <: SensitivityModel
     system_model::System
     pq_buses::AbstractArray
     slack_buses::AbstractArray

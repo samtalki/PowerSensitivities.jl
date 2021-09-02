@@ -11,17 +11,6 @@ function sensitivity(sensors::Vector,inj_range::Vector)
     dvdx = ForwardDiff.gradient(f,x) #g = ∇f
 end
 
-function sens_mat_perturb(sensors,injections,system_data::System)
-    """Makes a perturb-and-observe sensitivity matrix for a model"""
-    M = size(sensors)
-    L = size(injections)
-    S = zeros(M,L)
-    for (sensor,injection) in zip(sensors,injections)
-        1+2
-        #voltages_inj = injection_voltages()
-    end
-end
-
 function sensitivity_mat_analytic(sensors,injections,system_data::System)
     """Analytical sensitivity matrix, like Christakou et al"""
     ybus = Ybus(system_data)
