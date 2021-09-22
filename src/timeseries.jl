@@ -6,8 +6,8 @@
 
 function get_component_qsts(component,system::System,resolution=Dates.Hour(1),length=8760)
     #for (bus,t_step) in zip(PQ_buses,load_timeseries_DA[2])
-    resolution = Dates.Hour(1)
-    dates = range(DateTime("2020-01-01T00:00:00"),step=resolution,length=24)
+    start_time = DateTime("2020-01-01T00:00:00")
+    dates = range(start_time,step=resolution,length=length)
     data = TimeArray(dates,ones(24))
     time_series = SingleTimeSeries("max_active_power",data)
     return time_series    
