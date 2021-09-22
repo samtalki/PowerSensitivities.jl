@@ -4,7 +4,8 @@
 # DATA_DIR = "../../data" #hide
 # system = System(joinpath(DATA_DIR, "matpower/case5.m"))
 
-function qsts(system::System)
+function get_component_qsts(component,system::System,resolution=Dates.Hour(1),length=8760)
+    #for (bus,t_step) in zip(PQ_buses,load_timeseries_DA[2])
     resolution = Dates.Hour(1)
     dates = range(DateTime("2020-01-01T00:00:00"),step=resolution,length=24)
     data = TimeArray(dates,ones(24))
