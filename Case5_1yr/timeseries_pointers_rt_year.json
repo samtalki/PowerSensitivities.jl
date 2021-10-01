@@ -1,0 +1,26 @@
+[
+    {
+        "simulation": "REAL_TIME",
+        "category": "ElectricLoad",
+        "component_name": "bus2",
+        "label": "get_max_active_power",
+        "scaling_factor": "max",
+        "data_file": "./rt_load.csv"
+    },
+    {
+        "simulation": "REAL_TIME",
+        "category": "ElectricLoad",
+        "component_name": "bus3",
+        "label": "get_max_active_power",
+        "scaling_factor": "max",
+        "data_file": "./rt_load.csv"
+    },
+    {
+        "simulation": "REAL_TIME",
+        "category": "ElectricLoad",
+        "component_name": "bus4",
+        "label": "get_max_active_power",
+        "scaling_factor": "max",
+        "data_file": "./rt_load.csv"
+    }
+]
