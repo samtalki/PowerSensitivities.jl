@@ -1,42 +1,42 @@
-#DATA_DIR = download(PowerSystems.UtilsData.TestData, folder = pwd())
+"""
+Estimate voltage magnitude sensitivities
 
-function parse_network_model(DATA_DIR,system="matpower/case5_re.m")
-    system_data = System(joinpath(DATA_DIR,system))
-    return system_data
+Params:
+p - MxN matrix of deviations of active power
+q - MxN matrix of deviations of reactive power
+v - MxN matrix of deviations of bus voltage magnitudes
+lambd - ℓ2 regularization
+"""
+function calc_v_sens(p,q,v,lambd=nothing)
+	m,n = size(p)
+	spv = inv(p'*p + lambd*eye(n))*p'*v
+	sqv = inv(q'*q + lambd*eye(n))*q'*v
+	return spv,sqv
 end
 
+calc_v_sens(x,v,lambd) = sxv = inv(x'*x + lambd*eye(n))*x'*v
 
-function sensitivity(sensors::Vector,inj_range::Vector)
-    """Computes the gradient of the nodal voltages w.r.t. the inj_range"""
-    dvdx = ForwardDiff.gradient(f,x) #g = ∇f
+function calc_v_sens(x,v,lambd=nothing)
+	m,n = size(x)
+	sxv = inv(x'*x + lambd*eye(n))*x'*v
+	return sxv
 end
 
-function sensitivity_mat_analytic(sensors,injections,system_data::System)
-    """Analytical sensitivity matrix, like Christakou et al"""
-    ybus = Ybus(system_data)
+"""
+Estimate power-to-voltage magnitude sensitivities
+
+Params:
+p - MxN matrix of deviations of active power
+q - MxN matrix of deviations of reactive power
+v - MxN matrix of deviations of bus voltage magnitudes
+lambd - ℓ2 regularization
+"""
+function calc_pq_sens(p,q,v,lambd=nothing)
+	m,n = size(p)
+	svp = inv(v'*v + lambd*eye(n))*v'*p
+	svq = inv(v'*v + lambd*eye(n))*v'*q
+	return svp,svq
 end
 
-function sensitivity_global(inj_range_matrix,f_v=get_inj_range_voltages,method=Sobol,order=2,N=1000)
-    """Numeric global sensitivities for a single inj_bus"""
-    sens = gsa(f_v,method,inj_range_matrix; N, batch=false,order=order)
-    return sens
-end
-
-function sensitivity_diffeq(sensors,injections,system_data::System)
-    """Solves with DifferentialEquations.jl"""
-    1+2
-end
-
-
-function installed_capacity(system::System; technology::Type{T} = Generator) where T <: Generator
-    installed_capacity = 0.0
-    for g in get_components(T, system)
-        installed_capacity += get_max_active_power(g)
-    end
-    return installed_capacity
-end
-
-function inj_range_matrix(inj_min::Float64,inj_max::Float64,n_injections::Int)
-    return diagonal([(inj_min,inj_max) for i in range(length(n_injections))])
-end
+calc_pq_sens(x,v,lambd=nothing) = inv(v'*v + lambd*eye(size(v)[2]))*v'*x
 
