@@ -1,8 +1,7 @@
 module PowerSensitivities
 using PowerModels
-
-include("jacobian.jl")
-
+import SparseArrays
+include("jacobian_matrix.jl")
 
 export calc_dp_dth,calc_dq_dth
 

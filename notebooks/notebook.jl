@@ -10,9 +10,10 @@ begin
 	using OPFLearn
 	using JuMP
 	using Ipopt
+	using TimeSeries
 	using LinearAlgebra
 	using Gadfly
-	include("/home/sam/github/PowerSensitivities.jl/src/jacobian.jl")
+	include("/home/sam/github/PowerSensitivities.jl/src/jacobian_matrix.jl")
 end
 
 # ╔═╡ f7c54f1a-394b-478c-8169-14aa07354435
@@ -75,7 +76,7 @@ end
 plot(y=train_data["outputs"]["vm_bus"][:,1])
 
 # ╔═╡ ca32ae5d-d028-4ce5-93f0-858855fcca35
-
+J
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
