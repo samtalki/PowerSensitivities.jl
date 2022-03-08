@@ -1,5 +1,7 @@
 using Flux
 
-predict(x) = S*x .+ v0
+predict(S,Δx) = S*Δx .+ v0
 
-
+function linear(S,Δx,Δv)
+    return 
+end

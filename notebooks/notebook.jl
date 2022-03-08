@@ -12,22 +12,28 @@ begin
 	using Ipopt
 	using LinearAlgebra
 	using Gadfly
+	include("/home/sam/github/PowerSensitivities.jl/src/jacobian.jl")
 end
 
 # ╔═╡ f7c54f1a-394b-478c-8169-14aa07354435
 begin
-	network_data = parse_file("src/case3.m")
+	network_data = parse_file("/home/sam/github/PowerSensitivities.jl/src/case3.m")
 	network_data = make_basic_network(network_data)
 	Y = calc_admittance_matrix(network_data)
 	J = calc_basic_jacobian_matrix(network_data)
 end
 
 
-# ╔═╡ 363d4caa-63f8-4b24-bca5-96fe408991a6
-
-
 # ╔═╡ 21b33807-86df-466b-948c-ce7f17d2c1ff
-train_data = create_samples(network_data,50)
+function make_ami_dataset(network_data,N=100)
+	outputs = ["p_gen", "q_gen","vm_gen","vm_bus","va_bus"]
+	train_data = create_samples(network_data,N,output_vars=outputs)
+	return train_data
+end
+
+
+# ╔═╡ 363d4caa-63f8-4b24-bca5-96fe408991a6
+train_data = make_ami_dataset(network_data,1000)
 
 # ╔═╡ 1f3d5b0d-f082-44a6-83b4-d21daf361693
 """
@@ -66,7 +72,10 @@ end
 	
 
 # ╔═╡ d8f751f2-2962-4477-ba78-9ff3b5a50c36
-function dif
+plot(y=train_data["outputs"]["vm_bus"][:,1])
+
+# ╔═╡ ca32ae5d-d028-4ce5-93f0-858855fcca35
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -920,10 +929,11 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╠═0ae09678-9e6a-11ec-001c-1f0713f35b13
 # ╠═f7c54f1a-394b-478c-8169-14aa07354435
-# ╠═363d4caa-63f8-4b24-bca5-96fe408991a6
 # ╠═21b33807-86df-466b-948c-ce7f17d2c1ff
+# ╠═363d4caa-63f8-4b24-bca5-96fe408991a6
 # ╠═1f3d5b0d-f082-44a6-83b4-d21daf361693
 # ╠═70823f68-31ae-4bf8-b4b5-b87add15e395
 # ╠═d8f751f2-2962-4477-ba78-9ff3b5a50c36
+# ╠═ca32ae5d-d028-4ce5-93f0-858855fcca35
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

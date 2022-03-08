@@ -1,12 +1,12 @@
 
 """
-Calculate ∂p/∂θ given v, ∂q/∂v, and q_net
+Calculate ∂p/∂θ block of the power flow Jacobian given Δv, ∂q/∂v, and Δq
 """
-function calc_dp_dth(dqdv,v,q)
-    n = length(v)
+function calc_dp_dth(dqdv,Δv,Δq)
+    n = length(Δv)
     dpdth = zeros((n,n))
-    for (i,q_i) in enumerate(q)
-        for (j,v_j) in enumerate(v)
+    for (i,q_i) in enumerate(Δq)
+        for (j,v_j) in enumerate(Δv)
             if i==j
                 dpdth[i,j] = v_j*dqdv[i,j] - 2*q_i
             else
@@ -17,13 +17,13 @@ function calc_dp_dth(dqdv,v,q)
 end
 
 """
-Calculate ∂q/∂θ given v, ∂p/∂v, and p_net
+Calculate ∂q/∂θ given Δv, ∂p/∂v, and Δp
 """
-function calc_dq_dth(dpdv,v,p)
-    n = length(v)
+function calc_dq_dth(dpdv,Δv,Δp)
+    n = length(Δv)
     dpdth = zeros((n,n))
-    for (i,p_i) in enumerate(p)
-        for (j,v_j) in enumerate(v)
+    for (i,p_i) in enumerate(Δp)
+        for (j,v_j) in enumerate(Δv)
             if i==j
                 dqdth[i,j] = -v_j*dpdv[i,j] - 2*p_i
             else
