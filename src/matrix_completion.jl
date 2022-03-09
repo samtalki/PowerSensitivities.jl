@@ -1,6 +1,6 @@
 
 
-solver = MosekSolver(LOG=1)
+#solver = MosekSolver(LOG=1)
 
 function mat_complete_model(X,write_location::String)
     model = Model(GLPK.Optimizer)
@@ -40,4 +40,4 @@ function matrix_completion(X,Y)
 end
 
 
-model = Model(GLPK.Optimizer)
+#model = Model(GLPK.Optimizer)

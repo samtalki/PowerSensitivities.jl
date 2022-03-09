@@ -1,12 +1,6 @@
 using PowerModels
 using SparseArrays
 
-"""
-Get the basic bus indeces corresponding to PQ buses.
-"""
-function get_bus_type_idx(data::Dict{String,<:Any},sel_bus_types)
-    num_bus
-end
 
 """
 Stores data related to a Jacobian Matrix.  Only supports
@@ -15,105 +9,118 @@ sparse matrices.
 * `idx_to_bus` - a mapping from 1-to-n bus idx values to data model bus ids
 * `bus_to_idx` - a mapping from data model bus ids to 1-to-n bus idx values
 * `matrix` - the sparse Jacobian matrix values
-* `dpdth` - the sparse active power-angle sensitivity submatrix values
-* `dqdth` - the sparse reactive power-angle sensitivity submatrix values
-* `dpdv` - the sparse active power-voltage magnitude sensitivity submatrix values
-* `dqdv` - the sparse reactive power-voltage magnitude sensitivity submatrix values
+* `spth` - the sparse active power-angle sensitivity submatrix values
+* `sqth` - the sparse reactive power-angle sensitivity submatrix values
+* `spv` - the sparse active power-voltage magnitude sensitivity submatrix values
+* `sqv` - the sparse reactive power-voltage magnitude sensitivity submatrix values
 """
 struct JacobianMatrix{T}
     idx_to_bus::Vector{Int}
     bus_to_idx::Dict{Int,Int}
     matrix::SparseArrays.SparseMatrixCSC{T,Int}
-    dpdth::SparseArrays.SparseMatrixCSC{T,Int}
-    dqdth::SparseArrays.SparseMatrixCSC{T,Int}
-    dpdv::SparseArrays.SparseMatrixCSC{T,Int}
-    dqdv::SparseArrays.SparseMatrixCSC{T,Int}
+    spth::SparseArrays.SparseMatrixCSC{T,Int}
+    sqth::SparseArrays.SparseMatrixCSC{T,Int}
+    spv::SparseArrays.SparseMatrixCSC{T,Int}
+    sqv::SparseArrays.SparseMatrixCSC{T,Int}
 end
 
-"data should be a PowerModels network data model; only supports networks with exactly one reference bus"
-function calc_jacobian_matrix(data::Dict{String,<:Any})
-    num_bus = length(data["bus"])
-    Y = calc_admittance_matrix(data)
-    J = calc_basic_jacobian_matrix(data)
+"""
+Given a network network dict, find the bus indeces that match sel_bus_types.
+"""
+function get_idx_bus_types(network,sel_bus_types)
+    bus_types = [network["bus"][string(i)]["bus_type"] for i in 1:num_bus]
+    idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
+    return idx_sel_bus_types
+end
+
+
+"network should be a PowerModels network network model; only supports networks with exactly one reference bus"
+function calc_jacobian_matrix(network::Dict{String,<:Any})
+    num_bus = length(network["bus"])
+    Y = calc_admittance_matrix(network)
+    J = calc_basic_jacobian_matrix(network)
     idx_to_bus,bus_to_idx = Y.idx_to_bus,Y.bus_to_idx
-    dpdth,dqdth = J[1:num_bus,1:num_bus],J[num_bus+1:end,1:num_bus] #Angle submatrices
-    dpdv,dqdv = J[1:num_bus,num_bus+1:end],J[num_bus+1:end,num_bus+1:end] #Voltage magnitude submatrices
-    return JacobianMatrix(idx_to_bus,bus_to_idx,J,dpdth,dqdth,dpdv,dqdv)
+    spth,sqth = J[1:num_bus,1:num_bus],J[num_bus+1:end,1:num_bus] #Angle submatrices
+    spv,sqv = J[1:num_bus,num_bus+1:end],J[num_bus+1:end,num_bus+1:end] #Voltage magnitude submatrices
+    return JacobianMatrix(idx_to_bus,bus_to_idx,J,spth,sqth,spv,sqv)
 end
 
 """
 Calculate power flow Jacobian submatrix corresponding to specified bus_type
 """
-function calc_jacobian_matrix(data::Dict{String,<:Any},sel_bus_types)
-    num_bus = length(data["bus"])
-    Y = calc_admittance_matrix(data)
-    J = calc_basic_jacobian_matrix(data)
+function calc_jacobian_matrix(network::Dict{String,<:Any},sel_bus_types=1)
+    num_bus = length(network["bus"])
+    Y = calc_admittance_matrix(network)
+    J = calc_basic_jacobian_matrix(network)
     idx_to_bus,bus_to_idx = Y.idx_to_bus,Y.bus_to_idx
     #TODO: Add bus_to_idx and idx_to_bus filter
     #idx_to_bus = idx_to_bus[bus_types==bus_type]
     #bus_to_idx = filter( d_i -> d_i==bus_type, bus_to_idx)
-    bus_types = [data["bus"][string(i)]["bus_type"] for i in 1:num_bus]
+    bus_types = [network["bus"][string(i)]["bus_type"] for i in 1:num_bus]
     idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
     J_idx_sel_bus_types = [idx_sel_bus_types; idx_sel_bus_types .+ num_bus] #Get indeces from all blocks
     num_sel_bus_type = length(idx_sel_bus_types)
     J = J[J_idx_sel_bus_types,J_idx_sel_bus_types]
-    dpdth,dqdth = J[1:num_sel_bus_type,1:num_sel_bus_type],J[num_sel_bus_type+1:end,1:num_sel_bus_type] #Angle submatrices
-    dpdv,dqdv = J[1:num_sel_bus_type,num_sel_bus_type+1:end],J[num_sel_bus_type+1:end,num_sel_bus_type+1:end] #Voltage magnitude submatrices
-    return JacobianMatrix(idx_to_bus,bus_to_idx,J,dpdth,dqdth,dpdv,dqdv)
+    spth,sqth = J[1:num_sel_bus_type,1:num_sel_bus_type],J[num_sel_bus_type+1:end,1:num_sel_bus_type] #Angle submatrices
+    spv,sqv = J[1:num_sel_bus_type,num_sel_bus_type+1:end],J[num_sel_bus_type+1:end,num_sel_bus_type+1:end] #Voltage magnitude submatrices
+    return JacobianMatrix(idx_to_bus,bus_to_idx,J,spth,sqth,spv,sqv)
 end
-
 
 """
 Calculate ∂p/∂θ block of the power flow Jacobian given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v.
 """
-function calc_dpdth_jacobian_block(dqdv,vm,qnet)
+function calc_spth_jacobian_block(sqv,vm,qnet)
     n = length(vm)
-    dpdth = zeros((n,n))
+    spth = zeros((n,n))
     for (i,q_i) in enumerate(qnet)
         for (j,v_j) in enumerate(vm)
             if i==j
-                dpdth[i,j] = v_j*dqdv[i,j] - 2*q_i
+                spth[i,j] = v_j*sqv[i,j] - 2*q_i
             else
-                dpdth[i,j] = v_j*dqdv[i,j]
+                spth[i,j] = v_j*sqv[i,j]
             end
         end
     end
-    return dpdth
+    return spth
 end
 
 """
-Calculate ∂p/∂θ block of the power flow Jacobian given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v.
+Given network data dict, calculate the ∂p/∂θ block of the power flow Jacobian.
 """
-function calc_dpdth_jacobian_block(data::Dict{String,<:Any})
-    J = calc_jacobian_matrix(data)
-    vm,q = abs.(calc_basic_bus_voltage(data)),imag(calc_basic_bus_injection(data))
-    return calc_dpdth_jacobian_block(J.dqdv,vm,q)
+function calc_spth_jacobian_block(network::Dict{String,<:Any},sel_bus_types=1)
+    idx_bus_types = get_idx_bus_types(network,sel_bus_types)
+    J = calc_jacobian_matrix(network,sel_bus_types)
+    vm = abs.(calc_basic_bus_voltage(network))[idx_bus_types]
+	q = imag(calc_basic_bus_injection(network))[idx_bus_types]
+    return calc_spth_jacobian_block(J.sqv,vm,q)
 end
 
 
 """
 Calculate the ∂q/∂θ Jacobian block given vm, the ∂p/∂v Jacobian block, and pnet
 """
-function calc_dqdth_jacobian_block(dpdv,vm,pnet)
+function calc_sqth_jacobian_block(spv,vm,pnet)
     n = length(vm)
-    dqdth = zeros((n,n))
+    sqth = zeros((n,n))
     for (i,p_i) in enumerate(pnet)
         for (j,v_j) in enumerate(vm)
             if i==j
-                dqdth[i,j] = -v_j*dpdv[i,j] + 2*p_i
+                sqth[i,j] = -v_j*spv[i,j] + 2*p_i
             else
-                dqdth[i,j] = -v_j*dpdv[i,j]
+                sqth[i,j] = -v_j*spv[i,j]
             end
         end
     end
-    return dqdth
+    return sqth
 end
 
 """
-Calculate the ∂q/∂θ Jacobian block given a network data dict
+Given a network data dict, calculate the `∂q/∂θ` block of the power flow Jacobian. 
 """
-function calc_dqdth_jacobian_block(data::Dict{String,<:Any})
-    J = calc_jacobian_matrix(data)
-    vm,p = abs.(calc_basic_bus_voltage(data)), real(calc_basic_bus_injection(data))
-    return calc_dqdth_jacobian_block(J.dpdv,vm,p)
+function calc_sqth_jacobian_block(network::Dict{String,<:Any},sel_bus_types=1)
+    idx_bus_types = get_idx_bus_types(network,sel_bus_types)
+    J = calc_jacobian_matrix(network,sel_bus_types)
+    vm,p = abs.(calc_basic_bus_voltage(network))[idx_bus_types],real(calc_basic_bus_injection(network))[idx_bus_types]
+    return calc_sqth_jacobian_block(J.spv,vm,p)
 end
+

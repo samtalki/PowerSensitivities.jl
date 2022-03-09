@@ -1,8 +1,15 @@
-#using Flux
+struct AMI
+	p::Matrix
+	q::Matrix
+	v::Matrix
+end
 
-#loss(S,Δx,Δv) = norm(S*Δx - Δv)^2
-#∇l(S,Δx,Δv) = gradient(loss)[1]
-
+struct VoltageSensitivities
+	spv::Matrix
+	sqv::Matrix
+	svp::Matrix
+	svq::Matrix
+end
 
 """
 Estimate voltage magnitude sensitivities
@@ -12,17 +19,19 @@ Params:
 Δq - MxN matrix of deviations of reactive power
 Δv - MxN matrix of deviations of bus voltage magnitudes
 lambd - ℓ2 regularization
+
+Returns ∂v/∂p,∂v/∂q
 """
-function calc_v_sens(Δp,Δq,Δv,lambd=nothing)
+function est_voltage_power_sens(Δp,Δq,Δv,lambd=nothing)
 	m,n = size(Δp)
-	spv = inv(Δp'*Δp + lambd*eye(n))*Δp'*Δv
-	sqv = inv(Δq'*Δq + lambd*eye(n))*Δq'*Δv
-	return spv,sqv
+	svp = inv(Δp'*Δp + lambd*eye(n))*Δp'*Δv
+	svq = inv(Δq'*Δq + lambd*eye(n))*Δq'*Δv
+	return svp,svq
 end
 
-calc_v_sens(x,Δv,lambd) = sxv = inv(x'*x + lambd*eye(n))*x'*Δv
+est_voltage_power_sens(x,Δv,lambd) = sxv = inv(x'*x + lambd*eye(n))*x'*Δv
 
-function calc_v_sens(x,Δv,lambd=nothing)
+function est_voltage_power_sens(x,Δv,lambd=nothing)
 	m,n = size(x)
 	sxv = inv(x'*x + lambd*eye(n))*x'*Δv
 	return sxv
@@ -36,15 +45,17 @@ Params:
 Δq - MxN matrix of deviations of reactive power
 Δv - MxN matrix of deviations of bus voltage magnitudes
 lambd - ℓ2 regularization
+
+Returns estimate of ∂p/∂v,∂q/∂v
 """
-function calc_pq_sens(Δp,Δq,Δv,lambd=nothing)
+function est_power_voltage_sens(Δp,Δq,Δv,lambd=nothing)
 	m,n = size(Δp)
-	svp = inv(Δv'*Δv + lambd*eye(n))*Δv'*Δp
-	svq = inv(Δv'*Δv + lambd*eye(n))*Δv'*Δq
-	return svp,svq
+	spv = inv(Δv'*Δv + lambd*eye(n))*Δv'*Δp
+	sqv = inv(Δv'*Δv + lambd*eye(n))*Δv'*Δq
+	return spv,sqv
 end
 
-calc_pq_sens(x,Δv,lambd=nothing) = inv(Δv'*Δv + lambd*eye(size(Δv)[2]))*Δv'*x
+est_power_voltage_sens(x,Δv,lambd=nothing) = inv(Δv'*Δv + lambd*eye(size(Δv)[2]))*Δv'*x
 
 """
 Compute finite differences of time series data
@@ -54,3 +65,23 @@ function get_finite_diferences(pd,pg,qd,qg,vm)
 	dp,dq,dv = diff(pnet),diff(qnet),diff(vm)
 	return Dict("dp" => dp, "dq" => dq, "dv" => dv)
 end
+
+"""
+Estimates the power-to-angle sensitivities
+
+Params:
+Δp - MxN matrix of deviations of active power
+Δq - MxN matrix of deviations of reactive power
+Δv - MxN matrix of deviations of bus voltage magnitudes
+lambd - ℓ2 regularization
+
+Returns:
+Estimate of ∂p/∂θ,∂q/∂θ
+
+"""
+function est_power_angle_sens(Δp,Δq,Δv,vm,p,q,lambd=nothing)
+	spv,sqv = est_power_voltage_sens(Δp,Δq,Δv,lambd)
+	spth,sqth = calc_spth_jacobian_block(sqv,vm,q),calc_sqth_jacobian_block(spv,vm,p)
+	return spth,sqth
+end
+

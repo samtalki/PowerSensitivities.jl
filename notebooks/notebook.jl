@@ -22,38 +22,121 @@ begin
 	network_data = make_basic_network(network_data)
 	Y = calc_admittance_matrix(network_data)
 	J = calc_basic_jacobian_matrix(network_data)
+	vm,q = abs.(calc_basic_bus_voltage(network_data)),imag(calc_basic_bus_injection(network_data))
+	length(vm)
 end
 
 
-# ╔═╡ 21b33807-86df-466b-948c-ce7f17d2c1ff
-function make_ami_dataset(network_data,N=100)
+# ╔═╡ 40567598-ca5f-4163-a5a7-18c2677351e6
+function make_timeseries_dataset(network_data,N=100)
 	outputs = ["p_gen", "q_gen","vm_gen","vm_bus","va_bus"]
 	train_data = create_samples(network_data,N,output_vars=outputs)
 	return train_data
 end
 
+# ╔═╡ 2f34b86a-17b0-4666-932c-1884aafa67f4
+function get_idx_bus_types(data,sel_bus_types)
+	num_bus = length(network_data["bus"])
+	bus_types = [data["bus"][string(i)]["bus_type"] for i in 1:num_bus]
+	idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
+	return idx_sel_bus_types
+end
+
+
+# ╔═╡ cbfefc14-0b19-42b9-91b5-54d69f034bd6
+function make_ami_dataset(network_data,dataset,bus_type="1")
+	num_bus = length(network_data["bus"])
+	num_load = length(network_data["load"])
+	num_gen = length(network_data["gen"])
+	gen_bus = [network_data["gen"][string(i)]["gen_bus"] for i in 1:length(network_data["gen"])]
+	idx_sel_bus_types = get_idx_bus_types(network_data,bus_type)
+	num_type = length(idx_sel_bus_types)
+	P,Q,V = zeros((N,num_bus)),zeros((N,num_bus)),zeros((N,num_bus))
+	for (bus_idx,load_idx) in zip(1:num_bus,1:num_load)
+		P[:,k] = dataset["inputs"]["pd"][:,k] - dataset["outputs"]["p_gen"][:,bus_idx]
+		#Q[:,k] = 
+		#V[:,k] = 
+	end
+	return ami_dataset
+end
+
+# ╔═╡ a368c511-6c3a-4961-a3cc-84702076a708
+network_data["bus"]
+
+# ╔═╡ 21b33807-86df-466b-948c-ce7f17d2c1ff
+
 
 # ╔═╡ 363d4caa-63f8-4b24-bca5-96fe408991a6
-train_data = make_ami_dataset(network_data,1000)
+train_data = make_timeseries_dataset(network_data,1000)
 
-# ╔═╡ 1f3d5b0d-f082-44a6-83b4-d21daf361693
-
-
-# ╔═╡ 70823f68-31ae-4bf8-b4b5-b87add15e395
-
+# ╔═╡ 1a06e0e0-3abd-4a06-b343-04ef2b39bb76
+train_data
 
 # ╔═╡ d8f751f2-2962-4477-ba78-9ff3b5a50c36
 plot(y=train_data["outputs"]["vm_bus"][:,6])
 
 # ╔═╡ ca32ae5d-d028-4ce5-93f0-858855fcca35
-function get_finite_diferences(pd,pg,qd,qg,vm)
-	pnet,qnet = pd-pg,qd-qg
-	dp,dq,dv = diff(pnet),diff(qnet),diff(vm)
-	return Dict("dp" => dp, "dq" => dq, "dv" => dv)
-end
+
 
 # ╔═╡ 06021611-2e91-42b9-936d-d7088a5187a6
-function estimate_sensitivity_model()
+
+
+# ╔═╡ f0a20c33-a653-4f5a-ae51-7e2a5fe39886
+"""
+Estimate voltage magnitude sensitivities
+
+Params:
+Δp - MxN matrix of deviations of active power
+Δq - MxN matrix of deviations of reactive power
+Δv - MxN matrix of deviations of bus voltage magnitudes
+lambd - ℓ2 regularization
+
+Returns ∂v/∂p,∂v/∂q
+"""
+function est_voltage_power_sens(Δp,Δq,Δv,lambd=nothing)
+	m,n = size(Δp)
+	svp = inv(Δp'*Δp + lambd*eye(n))*Δp'*Δv
+	svq = inv(Δq'*Δq + lambd*eye(n))*Δq'*Δv
+	return svp,svq
+end
+
+# ╔═╡ 4607ce78-30f0-4177-aea5-8192dcf4cc00
+est_voltage_power_sens(x,Δv,lambd) = sxv = inv(x'*x + lambd*eye(n))*x'*Δv
+
+# ╔═╡ 0b6dafbe-4129-4825-852d-77f3e06790ad
+function est_voltage_power_sens(x,Δv,lambd=nothing)
+	m,n = size(x)
+	sxv = inv(x'*x + lambd*eye(n))*x'*Δv
+	return sxv
+end
+
+# ╔═╡ 44bdf0ba-12c1-496b-ae9e-61453796bd37
+"""
+Estimate power-to-voltage magnitude sensitivities
+
+Params:
+Δp - MxN matrix of deviations of active power
+Δq - MxN matrix of deviations of reactive power
+Δv - MxN matrix of deviations of bus voltage magnitudes
+lambd - ℓ2 regularization
+
+Returns estimate of ∂p/∂v,∂q/∂v
+"""
+function est_power_voltage_sens(Δp,Δq,Δv,lambd=nothing)
+	m,n = size(Δp)
+	spv = inv(Δv'*Δv + lambd*eye(n))*Δv'*Δp
+	sqv = inv(Δv'*Δv + lambd*eye(n))*Δv'*Δq
+	return spv,sqv
+end
+
+# ╔═╡ 142dbecb-505b-4ee7-9474-61e9f2eeff40
+est_power_voltage_sens(x,Δv,lambd=nothing) = inv(Δv'*Δv + lambd*eye(size(Δv)[2]))*Δv'*x
+
+# ╔═╡ 504de727-a5e7-4a3a-9e0c-f9163c8145b2
+
+
+# ╔═╡ b43986da-ba65-436e-8ffb-93dd0a98aa82
+train_data["inputs"]["pd"]
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -65,6 +148,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Mosek = "6405355b-0ac2-5fba-af84-adbd65488c0e"
 OPFLearn = "426fd8f4-da10-4833-b320-d1e833f8a26f"
 PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
+TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 
 [compat]
 Gadfly = "~1.3.4"
@@ -73,6 +157,7 @@ JuMP = "~0.21.10"
 Mosek = "~1.2.1"
 OPFLearn = "~0.1.1"
 PowerModels = "~0.18.4"
+TimeSeries = "~0.23.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -236,6 +321,11 @@ deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
 git-tree-sha1 = "3daef5523dd2e769dad2365274f760ff5f282c7d"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 version = "0.18.11"
+
+[[deps.DataValueInterfaces]]
+git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
+uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
+version = "1.0.0"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -439,6 +529,11 @@ version = "0.1.1"
 git-tree-sha1 = "fa6287a4469f5e048d763df38279ee729fbd44e5"
 uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.4.0"
+
+[[deps.IteratorInterfaceExtensions]]
+git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
+uuid = "82899510-4779-5014-852e-03e436cf321d"
+version = "1.0.0"
 
 [[deps.JLLWrappers]]
 deps = ["Preferences"]
@@ -863,6 +958,18 @@ version = "0.3.0"
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
+[[deps.TableTraits]]
+deps = ["IteratorInterfaceExtensions"]
+git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
+uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
+version = "1.0.1"
+
+[[deps.Tables]]
+deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "OrderedCollections", "TableTraits", "Test"]
+git-tree-sha1 = "5ce79ce186cc678bbb5c5681ca3379d1ddae11a1"
+uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
+version = "1.7.0"
+
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
@@ -870,6 +977,12 @@ uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[[deps.TimeSeries]]
+deps = ["Dates", "DelimitedFiles", "DocStringExtensions", "RecipesBase", "Reexport", "Statistics", "Tables"]
+git-tree-sha1 = "3c91141a9f2276c37c3b6bc2bd83e652d50fecbc"
+uuid = "9e3dc215-6440-5c97-bce1-76c03772f85e"
+version = "0.23.0"
 
 [[deps.TimeZones]]
 deps = ["Dates", "Downloads", "InlineStrings", "LazyArtifacts", "Mocking", "Printf", "RecipesBase", "Serialization", "Unicode"]
@@ -932,12 +1045,22 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╠═0ae09678-9e6a-11ec-001c-1f0713f35b13
 # ╠═f7c54f1a-394b-478c-8169-14aa07354435
+# ╠═40567598-ca5f-4163-a5a7-18c2677351e6
+# ╠═cbfefc14-0b19-42b9-91b5-54d69f034bd6
+# ╠═2f34b86a-17b0-4666-932c-1884aafa67f4
+# ╠═a368c511-6c3a-4961-a3cc-84702076a708
+# ╠═1a06e0e0-3abd-4a06-b343-04ef2b39bb76
 # ╠═21b33807-86df-466b-948c-ce7f17d2c1ff
 # ╠═363d4caa-63f8-4b24-bca5-96fe408991a6
-# ╠═1f3d5b0d-f082-44a6-83b4-d21daf361693
-# ╠═70823f68-31ae-4bf8-b4b5-b87add15e395
 # ╠═d8f751f2-2962-4477-ba78-9ff3b5a50c36
 # ╠═ca32ae5d-d028-4ce5-93f0-858855fcca35
 # ╠═06021611-2e91-42b9-936d-d7088a5187a6
+# ╠═f0a20c33-a653-4f5a-ae51-7e2a5fe39886
+# ╠═4607ce78-30f0-4177-aea5-8192dcf4cc00
+# ╠═0b6dafbe-4129-4825-852d-77f3e06790ad
+# ╠═44bdf0ba-12c1-496b-ae9e-61453796bd37
+# ╠═142dbecb-505b-4ee7-9474-61e9f2eeff40
+# ╠═504de727-a5e7-4a3a-9e0c-f9163c8145b2
+# ╠═b43986da-ba65-436e-8ffb-93dd0a98aa82
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
