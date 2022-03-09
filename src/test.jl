@@ -1,5 +1,18 @@
-include("jacobian_matrix.jl")
+
+module Tmp
+using PowerModels,OPFLearn
+using JuMP, Ipopt 
+using TimeSeries
 using LinearAlgebra
+using Gadfly
+using Convex 
+using Mosek
+import SparseArrays
+
+include("jacobian_matrix.jl")
+include("sensitivities.jl")
+include("matrix_completion.jl")
+
 """
 Jacobian info
 """
@@ -48,3 +61,5 @@ Checks if a matrix M is negative definite
 isnd(M) = all([real(eig)<0 for eig in eigvals(M)])
 
 isinvertible(x,ϵ=1e-12) = applicable(inv, x) && norm(I(size(x)[1]) - inv(x)*x) < ϵ
+
+end

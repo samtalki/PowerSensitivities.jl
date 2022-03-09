@@ -46,3 +46,11 @@ end
 
 calc_pq_sens(x,Δv,lambd=nothing) = inv(Δv'*Δv + lambd*eye(size(Δv)[2]))*Δv'*x
 
+"""
+Compute finite differences of time series data
+"""
+function get_finite_diferences(pd,pg,qd,qg,vm)
+	pnet,qnet = pd-pg,qd-qg
+	dp,dq,dv = diff(pnet),diff(qnet),diff(vm)
+	return Dict("dp" => dp, "dq" => dq, "dv" => dv)
+end
