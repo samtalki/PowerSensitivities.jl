@@ -2,6 +2,13 @@ using PowerModels
 using SparseArrays
 
 """
+Get the basic bus indeces corresponding to PQ buses.
+"""
+function get_bus_type_idx(data::Dict{String,<:Any},sel_bus_types)
+    num_bus
+end
+
+"""
 Stores data related to a Jacobian Matrix.  Only supports
 sparse matrices.
 
@@ -10,8 +17,8 @@ sparse matrices.
 * `matrix` - the sparse Jacobian matrix values
 * `dpdth` - the sparse active power-angle sensitivity submatrix values
 * `dqdth` - the sparse reactive power-angle sensitivity submatrix values
-* `dpdv` - the sparve active power-voltage magnitude sensitivity submatrix values
-* `dqdv` - the sparve reactive power-voltage magnitude sensitivity submatrix values
+* `dpdv` - the sparse active power-voltage magnitude sensitivity submatrix values
+* `dqdv` - the sparse reactive power-voltage magnitude sensitivity submatrix values
 """
 struct JacobianMatrix{T}
     idx_to_bus::Vector{Int}
@@ -55,6 +62,7 @@ function calc_jacobian_matrix(data::Dict{String,<:Any},sel_bus_types)
     return JacobianMatrix(idx_to_bus,bus_to_idx,J,dpdth,dqdth,dpdv,dqdv)
 end
 
+
 """
 Calculate ∂p/∂θ block of the power flow Jacobian given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v.
 """
@@ -70,21 +78,42 @@ function calc_dpdth_jacobian_block(dqdv,vm,qnet)
             end
         end
     end
+    return dpdth
 end
 
 """
-Calculate ∂q/∂θ given vm, ∂p/∂v, and pnet
+Calculate ∂p/∂θ block of the power flow Jacobian given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v.
+"""
+function calc_dpdth_jacobian_block(data::Dict{String,<:Any})
+    J = calc_jacobian_matrix(data)
+    vm,q = abs.(calc_basic_bus_voltage(data)),imag(calc_basic_bus_injection(data))
+    return calc_dpdth_jacobian_block(J.dqdv,vm,q)
+end
+
+
+"""
+Calculate the ∂q/∂θ Jacobian block given vm, the ∂p/∂v Jacobian block, and pnet
 """
 function calc_dqdth_jacobian_block(dpdv,vm,pnet)
     n = length(vm)
-    dpdth = zeros((n,n))
+    dqdth = zeros((n,n))
     for (i,p_i) in enumerate(pnet)
         for (j,v_j) in enumerate(vm)
             if i==j
-                dqdth[i,j] = -v_j*dpdv[i,j] - 2*p_i
+                dqdth[i,j] = -v_j*dpdv[i,j] + 2*p_i
             else
                 dqdth[i,j] = -v_j*dpdv[i,j]
             end
         end
     end
+    return dqdth
+end
+
+"""
+Calculate the ∂q/∂θ Jacobian block given a network data dict
+"""
+function calc_dqdth_jacobian_block(data::Dict{String,<:Any})
+    J = calc_jacobian_matrix(data)
+    vm,p = abs.(calc_basic_bus_voltage(data)), real(calc_basic_bus_injection(data))
+    return calc_dqdth_jacobian_block(J.dpdv,vm,p)
 end

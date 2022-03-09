@@ -13,12 +13,12 @@ begin
 	using TimeSeries
 	using LinearAlgebra
 	using Gadfly
-	include("/home/sam/github/PowerSensitivities.jl/src/jacobian_matrix.jl")
+	using PowerSensitivities
 end
 
 # ╔═╡ f7c54f1a-394b-478c-8169-14aa07354435
 begin
-	network_data = parse_file("/home/sam/github/PowerSensitivities.jl/src/case3.m")
+	network_data = parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case14.m")
 	network_data = make_basic_network(network_data)
 	Y = calc_admittance_matrix(network_data)
 	J = calc_basic_jacobian_matrix(network_data)
@@ -73,10 +73,17 @@ end
 	
 
 # ╔═╡ d8f751f2-2962-4477-ba78-9ff3b5a50c36
-plot(y=train_data["outputs"]["vm_bus"][:,1])
+plot(y=train_data["outputs"]["vm_bus"][:,6])
 
 # ╔═╡ ca32ae5d-d028-4ce5-93f0-858855fcca35
-J
+function get_finite_diferences(pd,pg,qd,qg,vm)
+	pnet,qnet = pd-pg,qd-qg
+	dp,dq,dv = diff(pnet),diff(qnet),diff(vm)
+	return Dict("dp" => dp, "dq" => dq, "dv" => dv)
+end
+
+# ╔═╡ 06021611-2e91-42b9-936d-d7088a5187a6
+function estimate_sensitivity_model()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -87,6 +94,7 @@ JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OPFLearn = "426fd8f4-da10-4833-b320-d1e833f8a26f"
 PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
+TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 
 [compat]
 Gadfly = "~1.3.4"
@@ -94,6 +102,7 @@ Ipopt = "~0.7.0"
 JuMP = "~0.21.10"
 OPFLearn = "~0.1.1"
 PowerModels = "~0.18.4"
+TimeSeries = "~0.23.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -254,6 +263,11 @@ deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
 git-tree-sha1 = "3daef5523dd2e769dad2365274f760ff5f282c7d"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 version = "0.18.11"
+
+[[DataValueInterfaces]]
+git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
+uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
+version = "1.0.0"
 
 [[Dates]]
 deps = ["Printf"]
@@ -457,6 +471,11 @@ version = "0.1.1"
 git-tree-sha1 = "fa6287a4469f5e048d763df38279ee729fbd44e5"
 uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.4.0"
+
+[[IteratorInterfaceExtensions]]
+git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
+uuid = "82899510-4779-5014-852e-03e436cf321d"
+version = "1.0.0"
 
 [[JLLWrappers]]
 deps = ["Preferences"]
@@ -871,6 +890,18 @@ version = "0.3.0"
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
+[[TableTraits]]
+deps = ["IteratorInterfaceExtensions"]
+git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
+uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
+version = "1.0.1"
+
+[[Tables]]
+deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "OrderedCollections", "TableTraits", "Test"]
+git-tree-sha1 = "5ce79ce186cc678bbb5c5681ca3379d1ddae11a1"
+uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
+version = "1.7.0"
+
 [[Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
@@ -878,6 +909,12 @@ uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 [[Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[[TimeSeries]]
+deps = ["Dates", "DelimitedFiles", "DocStringExtensions", "RecipesBase", "Reexport", "Statistics", "Tables"]
+git-tree-sha1 = "3c91141a9f2276c37c3b6bc2bd83e652d50fecbc"
+uuid = "9e3dc215-6440-5c97-bce1-76c03772f85e"
+version = "0.23.0"
 
 [[TimeZones]]
 deps = ["Dates", "Downloads", "InlineStrings", "LazyArtifacts", "Mocking", "Printf", "RecipesBase", "Serialization", "Unicode"]
@@ -936,5 +973,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═70823f68-31ae-4bf8-b4b5-b87add15e395
 # ╠═d8f751f2-2962-4477-ba78-9ff3b5a50c36
 # ╠═ca32ae5d-d028-4ce5-93f0-858855fcca35
+# ╠═06021611-2e91-42b9-936d-d7088a5187a6
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
