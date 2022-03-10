@@ -85,3 +85,14 @@ function est_power_angle_sens(Δp,Δq,Δv,vm,p,q,lambd=nothing)
 	return spth,sqth
 end
 
+
+
+"""
+Given dictionary of deviations, estimate power-to-voltage sensitivities
+"""
+function est_power_voltage_sens(diff_data::Dict,λ=1e-15)
+	Δp,Δq,Δv = diff_data["dp"],diff_data["dq"],diff_data["dv"]
+	spv = est_power_voltage_sens(Δp,Δv,λ)
+	sqv = est_power_voltage_sens(Δq,Δv,λ)
+	return spv,sqv
+end

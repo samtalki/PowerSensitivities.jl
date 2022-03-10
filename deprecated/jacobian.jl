@@ -1,6 +1,6 @@
 import SparseArrays: findnz,sparse
 """
-Computes the jacobian submatrices
+Computes the Jacobian submatrices
 H = dP/dδ
 L = dQ/dV
 The derivatives are ordered according to the bus number, 
@@ -77,6 +77,7 @@ function calc_basic_jacobian_matrix(data::Dict{String,<:Any})
     if !get(data, "basic_network", false)
         Memento.warn(_LOGGER, "calc_basic_jacobian_matrix requires basic network data and given data may be incompatible. make_basic_network can be used to transform data into the appropriate form.")
     end
+
     num_bus = length(data["bus"])
     v = calc_basic_bus_voltage(data)
     vm, va = abs.(v), angle.(v)
@@ -87,8 +88,8 @@ function calc_basic_jacobian_matrix(data::Dict{String,<:Any})
         push!(neighbors[I[nz]], J[nz])
         push!(neighbors[J[nz]], I[nz])
     end
-    J0_I = Int64[]
-    J0_J = Int64[]
+    J0_I = Int[]
+    J0_J = Int[]
     J0_V = Float64[]
     for i in 1:num_bus
         f_i_r = i

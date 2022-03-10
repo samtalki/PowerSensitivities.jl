@@ -14,17 +14,46 @@ function make_timeseries_dataset(network_data,N=100)
 	return train_data
 end
 
-function make_ami_dataset(network_data,dataset,bus_type="1")
-	num_bus = length(network_data["bus"])
-	num_load = length(network_data["load"])
-	num_gen = length(network_data["gen"])
-	gen_bus = [network_data["gen"][string(i)]["gen_bus"] for i in 1:length(network_data["gen"])]
-	idx_sel_bus_types = get_idx_bus_types(network_data,bus_type)
-	num_type = length(idx_sel_bus_types)
-	P,Q,V = zeros((N,num_bus)),zeros((N,num_bus)),zeros((N,num_bus))
-	for (bus_idx,load_idx) in zip(1:num_bus,1:num_load)
-		P[:,k] = dataset["inputs"]["pd"][:,k] - dataset["outputs"]["p_gen"][:,bus_idx]
-		#Q[:,k] = 
-		#V[:,k] = 
+"""
+Given a network data dict, generate an AMI dataset corresponding to net active/reactive power injections and voltage magnitudes at all PQ buses.
+"""
+function make_ami_dataset(data::Dict{String,<:Any},sel_bus_types=1,M=100)
+	bus_type_idxs = get_idx_bus_types(data,sel_bus_types)
+	outputs = ["p_gen", "q_gen","vm_gen","vm_bus","va_bus"]
+	ts = create_samples(data,M,output_vars=outputs) #Make time series with OPF learn
+	num_bus = length(data["bus"])
+	#load_bus_idx = [data["load"]["$i"]["load_bus"] for i in 1:length(data["load"])]
+	#gen_bus_idx = [data["gen"][string(i)]["gen_bus"] for i in 1:length(data["gen"])]
+	num_type = length(bus_type_idxs)
+	pnet,qnet,vm = zeros((M,num_bus)),zeros((M,num_bus)),ts["outputs"]["vm_bus"]
+	for (load_idx,load) in data["load"]
+		load_bus_idx = load["load_bus"]
+		load_idx = load["index"]
+		if load_bus_idx ∈ bus_type_idxs
+			pnet[:,load_bus_idx] += ts["inputs"]["pd"][:,load_idx]
+			qnet[:,load_bus_idx] += ts["inputs"]["qd"][:,load_idx]
+		end
 	end
-	return ami_dataset
+	for (gen_idx,gen) in data["gen"]
+		gen_bus_idx = gen["gen_bus"]
+		gen_idx = gen["index"]
+		if gen_bus_idx ∈ bus_type_idxs
+			pnet[:,gen_bus_idx] -= ts["outputs"]["p_gen"][:,gen_idx]
+			qnet[:,gen_bus_idx] -= ts["outputs"]["q_gen"][:,gen_idx]
+		end
+	end
+	return Dict(
+		"pnet" => pnet[:,bus_type_idxs], 
+		"qnet" => qnet[:,bus_type_idxs], 
+		"vm" => vm[:,bus_type_idxs])
+end
+
+
+"""
+Compute finite differences of time series data
+"""
+function get_finite_diferences(dataset::Dict)
+	pnet,qnet,vm = dataset["pnet"],dataset["qnet"],dataset["vm"]
+	dp,dq,dv = -diff(pnet,dims=1),-diff(qnet,dims=1),diff(vm,dims=1)
+	return Dict("dp" => dp, "dq" => dq, "dv" => dv)
+end

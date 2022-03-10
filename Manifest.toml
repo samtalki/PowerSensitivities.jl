@@ -389,9 +389,9 @@ version = "0.6.7"
 
 [[deps.DynamicPPL]]
 deps = ["AbstractMCMC", "AbstractPPL", "BangBang", "Bijectors", "ChainRulesCore", "Distributions", "LinearAlgebra", "MacroTools", "Random", "Setfield", "Test", "ZygoteRules"]
-git-tree-sha1 = "b898b08182a1256c344179023319b76cee397383"
+git-tree-sha1 = "171a31a1b108c7f8f1c7352effa74879c40d8435"
 uuid = "366bfd00-2699-11ea-058f-f148b4cae6d8"
-version = "0.17.9"
+version = "0.17.10"
 
 [[deps.EllipsisNotation]]
 deps = ["ArrayInterface"]
@@ -1509,9 +1509,9 @@ uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 
 [[deps.Zygote]]
 deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SparseArrays", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "93285d2877f1f1b09b2a2b029f90e9db10127022"
+git-tree-sha1 = "bf526aa30677f1dde58febc67cb9021aab5eb396"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
-version = "0.6.35"
+version = "0.6.36"
 
 [[deps.ZygoteRules]]
 deps = ["MacroTools"]
