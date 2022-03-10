@@ -81,65 +81,93 @@ function calc_jacobian_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     return JacobianMatrix(idx_to_bus,bus_to_idx,J,spth,sqth,spv,sqv)
 end
 
+
+
+
 """
-Calculate ∂p/∂θ block of the power flow Jacobian given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v.
+given a basic network data dict, returns a sparse real valued Jacobian matrix
+of the ac power flow problem.  The power variables are ordered by p and then q
+while voltage values are ordered by voltage angle and then voltage magnitude.
 """
-function calc_spth_jacobian_block(sqv,vm,qnet)
-    n = length(vm)
-    spth = zeros((n,n))
-    for (i,q_i) in enumerate(qnet)
-        for (j,v_j) in enumerate(vm)
-            if i==j
-                spth[i,j] = v_j*sqv[i,j] - 2*q_i
+function calc_basic_jacobian_matrix(data::Dict{String,<:Any})
+    if !get(data, "basic_network", false)
+        Memento.warn(_LOGGER, "calc_basic_jacobian_matrix requires basic network data and given data may be incompatible. make_basic_network can be used to transform data into the appropriate form.")
+    end
+
+    num_bus = length(data["bus"])
+    v = calc_basic_bus_voltage(data)
+    vm, va = abs.(v), angle.(v)
+    Y = calc_basic_admittance_matrix(data)
+    neighbors = [Set{Int}([i]) for i in 1:num_bus]
+    I, J, V = findnz(Y)
+    for nz in eachindex(V)
+        push!(neighbors[I[nz]], J[nz])
+        push!(neighbors[J[nz]], I[nz])
+    end
+    J0_I = Int[]
+    J0_J = Int[]
+    J0_V = Float64[]
+    for i in 1:num_bus
+        f_i_r = i
+        f_i_i = i + num_bus
+        for j in neighbors[i]
+            x_j_fst = j + num_bus
+            x_j_snd = j
+            push!(J0_I, f_i_r); push!(J0_J, x_j_fst); push!(J0_V, 0.0)
+            push!(J0_I, f_i_r); push!(J0_J, x_j_snd); push!(J0_V, 0.0)
+            push!(J0_I, f_i_i); push!(J0_J, x_j_fst); push!(J0_V, 0.0)
+            push!(J0_I, f_i_i); push!(J0_J, x_j_snd); push!(J0_V, 0.0)
+        end
+    end
+    J = sparse(J0_I, J0_J, J0_V)
+    for i in 1:num_bus
+        i1 = i
+        i2 = i + num_bus
+        for j in neighbors[i]
+            j1 = j
+            j2 = j + num_bus
+            bus_type = data["bus"]["$(j)"]["bus_type"]
+            if bus_type == 1
+                if i == j
+                    y_ii = Y[i,i]
+                    J[i1, j1] =                      + vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
+                    J[i1, j2] = + 2*real(y_ii)*vm[i] +         sum(  real(Y[i,k]) * vm[k] * cos(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * sin(va[i] - va[k]) for k in neighbors[i] if k != i )
+                    J[i2, j1] =                        vm[i] * sum(  real(Y[i,k]) * vm[k] * cos(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * sin(va[i] - va[k]) for k in neighbors[i] if k != i )
+                    J[i2, j2] = - 2*imag(y_ii)*vm[i] +         sum(  real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) - imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
+                else
+                    y_ij = Y[i,j]
+                    J[i1, j1] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
+                    J[i1, j2] =         vm[i] * (  real(y_ij) * cos(va[i] - va[j]) + imag(y_ij) * sin(va[i] - va[j]) )
+                    J[i2, j1] = vm[i] * vm[j] * ( -real(y_ij) * cos(va[i] - va[j]) - imag(y_ij) * sin(va[i] - va[j]) )
+                    J[i2, j2] =         vm[i] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
+                end
+            elseif bus_type == 2
+                if i == j
+                    J[i1, j1] = vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
+                    J[i1, j2] = 0.0
+                    J[i2, j1] = vm[i] * sum(  real(Y[i,k]) * vm[k] * cos(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * sin(va[i] - va[k]) for k in neighbors[i] if k != i )
+                    J[i2, j2] = 1.0
+                else
+                    y_ij = Y[i,j]
+                    J[i1, j1] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
+                    J[i1, j2] = 0.0
+                    J[i2, j1] = vm[i] * vm[j] * ( -real(y_ij) * cos(va[i] - va[j]) - imag(y_ij) * sin(va[i] - va[j]) )
+                    J[i2, j2] = 0.0
+                end
+            elseif bus_type == 3
+                if i == j
+                    J[i1, j1] = 1.0
+                    J[i1, j2] = 0.0
+                    J[i2, j1] = 0.0
+                    J[i2, j2] = 1.0
+                end
             else
-                spth[i,j] = v_j*sqv[i,j]
+                @assert false
             end
         end
     end
-    return spth
+    return J
 end
-
-"""
-Given network data dict, calculate the ∂p/∂θ block of the power flow Jacobian.
-"""
-function calc_spth_jacobian_block(network::Dict{String,<:Any},bus_types=1)
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    J = calc_jacobian_matrix(network,sel_bus_types)
-    vm = abs.(calc_basic_bus_voltage(network))[idx_sel_bus_types]
-	q = imag(calc_basic_bus_injection(network))[idx_sel_bus_types]
-    return calc_spth_jacobian_block(J.sqv,vm,q)
-end
-
-
-"""
-Calculate the ∂q/∂θ Jacobian block given vm, the ∂p/∂v Jacobian block, and pnet
-"""
-function calc_sqth_jacobian_block(spv,vm,pnet)
-    n = length(vm)
-    sqth = zeros((n,n))
-    for (i,p_i) in enumerate(pnet)
-        for (j,v_j) in enumerate(vm)
-            if i==j
-                sqth[i,j] = -v_j*spv[i,j] + 2*p_i
-            else
-                sqth[i,j] = -v_j*spv[i,j]
-            end
-        end
-    end
-    return sqth
-end
-
-"""
-Given a network data dict, calculate the `∂q/∂θ` block of the power flow Jacobian. 
-"""
-function calc_sqth_jacobian_block(network::Dict{String,<:Any},sel_bus_types=1)
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    J = calc_jacobian_matrix(network,sel_bus_types)
-    vm,p = abs.(calc_basic_bus_voltage(network))[idx_sel_bus_types],real(calc_basic_bus_injection(network))[idx_sel_bus_types]
-    return calc_sqth_jacobian_block(J.spv,vm,p)
-end
-
-
 
 
 """

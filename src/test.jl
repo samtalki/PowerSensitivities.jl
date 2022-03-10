@@ -4,8 +4,6 @@ using PowerModels
 using LinearAlgebra
 
 
-
-
 """
 Checks if a matrix M is positive definite
 """
@@ -44,7 +42,7 @@ function test_assumption1(sel_bus_types=[1,2],network_data_path="/home/sam/githu
             println("Jacobian cannot be computed for "*name)
             continue
         end
-
+		Y = Matrix(calc_basic_admittance_matrix(data))
 		Jmat = Matrix(J.matrix)
 		spth = Matrix(J.spth)
         
@@ -54,6 +52,7 @@ function test_assumption1(sel_bus_types=[1,2],network_data_path="/home/sam/githu
 			"norm(spth-spth')" => symmetricdiff(spth),
 			"rel(spth-spth')" => symmetricdiff(spth)/norm(spth),
             "dpdth_pd" => ispd(spth),
+			"y_symmetric" => issymmetric(Y),
 			"dpdth_symmetric" => issymmetric(spth),
             "J_nonsingular" => isinvertible(Jmat)
             #"dpdth_norm" => norm(J.spth),
