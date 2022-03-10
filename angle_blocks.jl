@@ -46,16 +46,20 @@ struct JacobianMatrix{T}
     sqv::SparseArrays.SparseMatrixCSC{T,Int}
 end
 
+# ╔═╡ cc904d3d-d426-4da0-81ac-052fb021d262
+pq_buses(network) = filter(p->p.second["bus_type"]∈[1],network["bus"])
+
 # ╔═╡ a8fdadc0-a662-4767-b9b9-5860d2b4f510
 """
-Given a network data dict, find the bus indeces that match `sel_bus_types`.
+Given a network network dict, find the bus indeces that match bus_types.
 """
-function get_idx_bus_types(data,sel_bus_types=1)
-	num_bus = length(data["bus"])
-	bus_types = [data["bus"][string(i)]["bus_type"] for i in 1:num_bus]
-    idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
-    return idx_sel_bus_types
+function get_idx_bus_types(network,bus_types)
+    bus_of_type = filter(d->d.second["bus_type"]∈bus_types,network["bus"])
+    return [d.second["index"] for d in bus_of_type]
 end
+
+# ╔═╡ cf94627d-6cba-4720-a07a-fe685e5a31d0
+get_bus_of_type(network,bus_types=[1]) = filter(d->d.second["bus_type"]∈bus_types,network["bus"])
 
 # ╔═╡ 672e2a92-c90a-43e2-a143-cfb1ea4f6c0b
 """
@@ -144,17 +148,34 @@ begin
 	vm,q = abs.(calc_basic_bus_voltage(data)),imag(calc_basic_bus_injection(data))
 end
 
-# ╔═╡ 1bf35266-6677-4845-88b5-38032aff7aeb
-begin
-	pq_bus = Dict(bus["index"] => Int for (i,bus) in data["bus"])
-	# for (i,bus) in data["bus"]
-	# end
+# ╔═╡ 88ad817d-5292-44f7-ba65-8e36163d4780
+idx = get_idx_bus_types(data,[1])
+
+# ╔═╡ b390b38c-e5ae-4f4b-bfdb-ed54dcad1582
+function find_bus_of_type(network,sel_bus_types)
+    bus_of_type = Dict()
+    for (key,bus) in network["bus"]
+        type = bus["bus_type"]
+        if(type ∈ sel_bus_types)
+            push!(bus_of_type, key => bus)
+        end
+    end
+    return bus_of_type
 end
 
-	
-
-# ╔═╡ 20f98a3c-9fd3-4228-899d-494de08f8d32
+# ╔═╡ 251026c2-d8ba-444b-94e8-10b6eb8c7afe
 idx_bus_types = get_idx_bus_types(data,1)
+
+# ╔═╡ b76bc7d2-3d31-41a4-8ece-e07ef187f99c
+
+
+# ╔═╡ 1805e082-677b-4901-80db-2dca2a873b2d
+for (i,bus) in data["bus"]
+	println("========================")
+	println(i)
+	println(bus["bus_i"])
+	println(bus["index"])
+end
 
 # ╔═╡ 034c3789-dc83-4bf3-8045-5ac677bfb2b7
 sqth = calc_sqth_jacobian_block(data)
@@ -320,6 +341,9 @@ hat_spth
 
 # ╔═╡ b19a5dc3-8ab3-49b2-9ce2-7b4a7548601f
 hat_sqth
+
+# ╔═╡ c0779644-7e11-4b4b-aac2-28db5f135a00
+pq_buses(data)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1245,15 +1269,20 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═3a02936c-9fcc-11ec-2bee-270c8626402c
 # ╠═dfb0816c-aeda-4124-957a-f439fe8dde28
 # ╠═436a43d6-4d70-4eba-9f29-b198f4ba9ebe
+# ╠═cc904d3d-d426-4da0-81ac-052fb021d262
 # ╠═a8fdadc0-a662-4767-b9b9-5860d2b4f510
-# ╠═1bf35266-6677-4845-88b5-38032aff7aeb
+# ╠═cf94627d-6cba-4720-a07a-fe685e5a31d0
+# ╠═88ad817d-5292-44f7-ba65-8e36163d4780
 # ╠═672e2a92-c90a-43e2-a143-cfb1ea4f6c0b
 # ╠═8c1e987a-8124-4a46-a89c-ef31aeba4f32
 # ╠═9a66a455-aeb0-4e18-b50b-5945227b3e63
 # ╠═b4236c4e-cd36-4d77-900b-c4538ae4dc59
 # ╠═738f2979-c6a2-4c0d-9339-d7143164b511
 # ╠═24193ad5-8e28-4351-bcc7-ebe902b9b8a7
-# ╠═20f98a3c-9fd3-4228-899d-494de08f8d32
+# ╠═b390b38c-e5ae-4f4b-bfdb-ed54dcad1582
+# ╠═251026c2-d8ba-444b-94e8-10b6eb8c7afe
+# ╠═b76bc7d2-3d31-41a4-8ece-e07ef187f99c
+# ╠═1805e082-677b-4901-80db-2dca2a873b2d
 # ╠═034c3789-dc83-4bf3-8045-5ac677bfb2b7
 # ╠═28d59501-e7e8-4169-9517-c040f3b37d5e
 # ╠═c8a29be0-8279-428d-aafc-988884df8b24
@@ -1275,5 +1304,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═b91d73dc-b94a-45f2-ab5b-58ec6336030e
 # ╠═155d88c3-d3d2-46fb-aae4-9e5fc6a9e94e
 # ╠═b19a5dc3-8ab3-49b2-9ce2-7b4a7548601f
+# ╠═c0779644-7e11-4b4b-aac2-28db5f135a00
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

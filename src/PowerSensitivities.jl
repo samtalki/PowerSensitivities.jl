@@ -7,7 +7,6 @@ using TimeSeries
 using LinearAlgebra
 using Gadfly
 using Convex 
-using Mosek
 import SparseArrays
 
 include("jacobian_matrix.jl")
