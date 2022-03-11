@@ -10,7 +10,8 @@ using Convex
 import SparseArrays
 
 include("jacobian_matrix.jl")
-include("sensitivities.jl")
+include("sensitivities/voltage.jl")
+include("sensitivities/angles.jl")
 include("matrix_completion.jl")
 
 export calc_jacobian_matrix

@@ -45,3 +45,7 @@ function calc_qv_jacobian(network::Dict{String,<:Any})
     end
     return ∂q∂v
 end
+
+"""
+Given voltage magnitudes and power injections, and  
+"""
