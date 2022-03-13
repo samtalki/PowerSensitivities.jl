@@ -16,8 +16,7 @@ include("matrix_completion.jl")
 
 export calc_jacobian_matrix
 export calc_bus_idx_of_type
-export calc_spth_jacobian_block
-export calc_sqth_jacobian_block
-
+export calc_pth_jacobian, calc_qth_jacobian
+export calc_pv_jacobian, calc_qv_jacobian
 
 end

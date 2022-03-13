@@ -1,7 +1,6 @@
 using PowerModels
 using SparseArrays
 
-
 """
 Stores data related to a Jacobian Matrix.  Only supports
 sparse matrices.
@@ -23,7 +22,6 @@ struct JacobianMatrix{T}
     spv::SparseArrays.SparseMatrixCSC{T,Int}
     sqv::SparseArrays.SparseMatrixCSC{T,Int}
 end
-
 
 """
 Given a network network dict, find the bus indeces that have bus_types in sel_bus_types .
@@ -67,7 +65,7 @@ end
 """
 Calculate power flow Jacobian submatrix corresponding to specified bus_type
 """
-function calc_jacobian_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
+function calc_jacobian_matrix(network::Dict{String,<:Any},sel_bus_types)
     num_bus = length(network["bus"])
     Y = calc_admittance_matrix(network)
     idx_to_bus,bus_to_idx = Y.idx_to_bus,Y.bus_to_idx
@@ -80,9 +78,6 @@ function calc_jacobian_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     spv,sqv = J[1:num_sel_bus_type,num_sel_bus_type+1:end],J[num_sel_bus_type+1:end,num_sel_bus_type+1:end] #Voltage magnitude submatrices
     return JacobianMatrix(idx_to_bus,bus_to_idx,J,spth,sqth,spv,sqv)
 end
-
-
-
 
 """
 given a basic network data dict, returns a sparse real valued Jacobian matrix
