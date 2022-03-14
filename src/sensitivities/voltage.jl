@@ -1,45 +1,71 @@
 """
-Given a network data dict, calculate the ∂p/∂v plock of the power flow Jacobian.
-Uses the voltage and power injections as depicted in the basic network.
+Given a network data dict, and sel_bus_types ⊂{1,2,3}:
+Calculate power flow Jacobian block ∂p/∂v  
 """
-function calc_pv_jacobian(network::Dict{})
+function calc_pv_jacobian(network::Dict{String,<:Any},sel_bus_types::Union{Vector,Set})
+    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
+    ∂p∂v = calc_pv_jacobian(network)
+    return ∂p∂v[idx_sel_bus_types,idx_sel_bus_types]
+end
+
+"""
+Given a network data dict, 
+Calculate the ∂p/∂v plock of the power flow Jacobian.
+Usees the voltage and power injections as depicted in the basic network.
+"""
+function calc_pv_jacobian(network::Dict{String,<:Any})
     v = calc_basic_bus_voltage(network)
     vm,va = abs.(v),angle.(v)
     n = length(v)
-    p = real(calc_basic_bus_injection(network))
+    p = real.(calc_basic_bus_injection(network))
     Y = calc_basic_admittance_matrix(network)
-    G,B = real(Y),imag(Y)
+    G,B = real.(Y),imag.(Y)
     ∂p∂v = zeros((n,n))
-    for (i,q_i) in enumerate(q)
-        for j(v_j) in enumerate(vm)
-            if i==j
-                ∂p∂v[i,j] = q_i/v_j - B[i,j]*v_j
+    for (i,p_i) in enumerate(p)
+        for (k,v_k) in enumerate(vm)
+            if i==k
+                ∂p∂v[i,i] = (p_i/v_k) + G[i,k]*v_k
             else
-                ∂p∂v[i,j] = v_i*(G[i,j]*sin(va[i]-va[j])-B[i,j]*cos(va[i]-va[j]))
+                θik = va[i] - va[k]
+                ∂p∂v[i,k] = v_i*( G[i,k]*cos(θik)+ B[i,k]*sin(θik) )
             end
         end
     end
     return ∂p∂v
-    
 end
+
 """
-Given a network data dict, calculate ∂q/∂v block of the power flow Jacobian.
+Given a network data dict, and sel_bus_types ⊂{1,2,3}:
+Calculate power flow Jacobian block ∂p/∂v  
+"""
+function calc_qv_jacobian(network::Dict{String,<:Any},sel_bus_types::Union{Vector,Set})
+    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
+    ∂q∂v = calc_qv_jacobian(network)
+    return ∂q∂v[idx_sel_bus_types,idx_sel_bus_types]
+end
+
+
+"""
+Given a network data dict, 
+Calculate ∂q/∂v block of the power flow Jacobian.
 Uses the voltage and power injections as depicted in the basic network.
 """
 function calc_qv_jacobian(network::Dict{String,<:Any})
     v = calc_basic_bus_voltage(network)
     vm,va = abs.(v),angle.(v)
     n = length(v)
-    q = imag(calc_basic_bus_injection(network))
+    q = imag.(calc_basic_bus_injection(network))
     Y = calc_basic_admittance_matrix(network)
-    G,B = real(Y),imag(Y)
+    G,B = real.(Y),imag.(Y)
     ∂q∂v = zeros((n,n))
     for (i,q_i) in enumerate(q)
-        for j(v_j) in enumerate(vm)
-            if i==j
-                ∂q∂v[i,j] = q_i/v_j - B[i,j]*v_j
+        v_i = vm[i]
+        for (k,v_k) in enumerate(vm)
+            if i==k
+                ∂q∂v[i,i] = q_i/v_i - B[i,i]*v_i
             else
-                ∂q∂v[i,j] = v_i*(G[i,j]*sin(va[i]-va[j])-B[i,j]*cos(va[i]-va[j]))
+                θik = va[i]-va[k]
+                ∂q∂v[i,k] = v_i*(G[i,k]*sin(θik)-B[i,k]*cos(θik))
             end
         end
     end
@@ -47,5 +73,5 @@ function calc_qv_jacobian(network::Dict{String,<:Any})
 end
 
 """
-Given voltage magnitudes and power injections, and  
+Given voltage magnitudes, power injections, and the ∂  
 """
