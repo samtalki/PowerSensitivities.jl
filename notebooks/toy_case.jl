@@ -4,367 +4,29 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 3a02936c-9fcc-11ec-2bee-270c8626402c
-begin
-	using PowerModels
-	using Ipopt
-	using OPFLearn
-	import SparseArrays
-	using JuMP
-	using Statistics
+# ╔═╡ bf7c122a-a2e7-11ec-3063-0bcff1909553
+begin 
 	using LinearAlgebra
-	using DataFrames
+	using PowerModels
 	using Gadfly
 end
 
-# ╔═╡ dfb0816c-aeda-4124-957a-f439fe8dde28
-function plot_matrix(M)
-	set_default_plot_size(3.5inch, 3.5/1.61828inch)
-	spy(M)
-end
+# ╔═╡ 2bdb4883-577b-4958-a160-75e5c96a8505
+network = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
 
-# ╔═╡ 436a43d6-4d70-4eba-9f29-b198f4ba9ebe
-"""
-Stores data related to a Jacobian Matrix.  Only supports
-sparse matrices.
+# ╔═╡ 9fa1bfa6-e03c-4813-a793-7f88302fd3f3
 
-* `idx_to_bus` - a mapping from 1-to-n bus idx values to data model bus ids
-* `bus_to_idx` - a mapping from data model bus ids to 1-to-n bus idx values
-* `matrix` - the sparse Jacobian matrix values
-* `spth` - the sparse active power-angle sensitivity submatrix values
-* `sqth` - the sparse reactive power-angle sensitivity submatrix values
-* `spv` - the sparse active power-voltage magnitude sensitivity submatrix values
-* `sqv` - the sparse reactive power-voltage magnitude sensitivity submatrix values
-"""
-struct JacobianMatrix{T}
-    idx_to_bus::Vector{Int}
-    bus_to_idx::Dict{Int,Int}
-    matrix::SparseArrays.SparseMatrixCSC{T,Int}
-    spth::SparseArrays.SparseMatrixCSC{T,Int}
-    sqth::SparseArrays.SparseMatrixCSC{T,Int}
-    spv::SparseArrays.SparseMatrixCSC{T,Int}
-    sqv::SparseArrays.SparseMatrixCSC{T,Int}
-end
-
-# ╔═╡ cc904d3d-d426-4da0-81ac-052fb021d262
-pq_buses(network) = filter(p->p.second["bus_type"]∈[1],network["bus"])
-
-# ╔═╡ a8fdadc0-a662-4767-b9b9-5860d2b4f510
-"""
-Given a network network dict, find the bus indeces that match bus_types.
-"""
-function get_idx_bus_types(network,bus_types)
-    bus_of_type = filter(d->d.second["bus_type"]∈bus_types,network["bus"])
-    return [d.second["index"] for d in bus_of_type]
-end
-
-# ╔═╡ cf94627d-6cba-4720-a07a-fe685e5a31d0
-get_bus_of_type(network,bus_types=[1]) = filter(d->d.second["bus_type"]∈bus_types,network["bus"])
-
-# ╔═╡ 672e2a92-c90a-43e2-a143-cfb1ea4f6c0b
-"""
-Calculate power flow Jacobian submatrix corresponding to specified bus_type
-"""
-function calc_jacobian_matrix(data::Dict{String,<:Any},sel_bus_types=1)
-    num_bus = length(data["bus"])
-    Y = calc_admittance_matrix(data)
-    J = calc_basic_jacobian_matrix(data)
-    idx_to_bus,bus_to_idx = Y.idx_to_bus,Y.bus_to_idx
-    #TODO: Add bus_to_idx and idx_to_bus filter
-    #idx_to_bus = idx_to_bus[bus_types==bus_type]
-    #bus_to_idx = filter( d_i -> d_i==bus_type, bus_to_idx)
-    bus_types = [data["bus"][string(i)]["bus_type"] for i in 1:num_bus]
-    idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
-    J_idx_sel_bus_types = [idx_sel_bus_types; idx_sel_bus_types .+ num_bus] #Get indeces from all blocks
-    num_sel_bus_type = length(idx_sel_bus_types)
-    J = J[J_idx_sel_bus_types,J_idx_sel_bus_types]
-    spth,sqth = J[1:num_sel_bus_type,1:num_sel_bus_type],J[num_sel_bus_type+1:end,1:num_sel_bus_type] #Angle submatrices
-    spv,sqv = J[1:num_sel_bus_type,num_sel_bus_type+1:end],J[num_sel_bus_type+1:end,num_sel_bus_type+1:end] #Voltage magnitude submatrices
-    return JacobianMatrix(idx_to_bus,bus_to_idx,J,spth,sqth,spv,sqv)
-end
-
-# ╔═╡ 8c1e987a-8124-4a46-a89c-ef31aeba4f32
-"""
-Calculate ∂p/∂θ block of the power flow Jacobian given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v.
-"""
-function calc_spth_jacobian_block(sqv,vm,qnet)
-    n = length(vm)
-    spth = zeros((n,n))
-    for (i,q_i) in enumerate(qnet)
-        for (j,v_j) in enumerate(vm)
-            if i==j
-                spth[i,j] = v_j*sqv[i,j] - 2*q_i
-            else
-                spth[i,j] = v_j*sqv[i,j]
-            end
-        end
-    end
-    return spth
-end
-
-# ╔═╡ 9a66a455-aeb0-4e18-b50b-5945227b3e63
-function calc_spth_jacobian_block(data::Dict{String,<:Any},sel_bus_types=1)
-    idx_bus_types = get_idx_bus_types(data,sel_bus_types)
-    J = calc_jacobian_matrix(data,sel_bus_types)
-    vm = abs.(calc_basic_bus_voltage(data))[idx_bus_types]
-	q = imag(calc_basic_bus_injection(data))[idx_bus_types]
-    return calc_spth_jacobian_block(J.sqv,vm,q)
-end
-
-# ╔═╡ b4236c4e-cd36-4d77-900b-c4538ae4dc59
-function calc_sqth_jacobian_block(spv,vm,pnet)
-    n = length(vm)
-    sqth = zeros((n,n))
-    for (i,p_i) in enumerate(pnet)
-        for (j,v_j) in enumerate(vm)
-            if i==j
-                sqth[i,j] = -v_j*spv[i,j] + 2*p_i
-            else
-                sqth[i,j] = -v_j*spv[i,j]
-            end
-        end
-    end
-    return sqth
-end
-
-# ╔═╡ 738f2979-c6a2-4c0d-9339-d7143164b511
-"""
-Given a network data dict, calculate the `∂q/∂θ` block of the power flow Jacobian. 
-"""
-function calc_sqth_jacobian_block(network_data::Dict{String,<:Any},sel_bus_types=1)
-    idx_bus_types = get_idx_bus_types(network_data,sel_bus_types)
-    J = calc_jacobian_matrix(network_data,sel_bus_types)
-    vm,p = abs.(calc_basic_bus_voltage(network_data))[idx_bus_types],real(calc_basic_bus_injection(network_data))[idx_bus_types]
-    return calc_sqth_jacobian_block(J.spv,vm,p)
-end
-
-# ╔═╡ 24193ad5-8e28-4351-bcc7-ebe902b9b8a7
-begin
-	#Load network data
-	data = parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case14.m")
-	data = make_basic_network(data)
-	Y = calc_admittance_matrix(data)
-	J = calc_jacobian_matrix(data,1)
-	vm,q = abs.(calc_basic_bus_voltage(data)),imag(calc_basic_bus_injection(data))
-end
-
-# ╔═╡ 88ad817d-5292-44f7-ba65-8e36163d4780
-idx = get_idx_bus_types(data,[1])
-
-# ╔═╡ b390b38c-e5ae-4f4b-bfdb-ed54dcad1582
-function find_bus_of_type(network,sel_bus_types)
-    bus_of_type = Dict()
-    for (key,bus) in network["bus"]
-        type = bus["bus_type"]
-        if(type ∈ sel_bus_types)
-            push!(bus_of_type, key => bus)
-        end
-    end
-    return bus_of_type
-end
-
-# ╔═╡ 251026c2-d8ba-444b-94e8-10b6eb8c7afe
-idx_bus_types = get_idx_bus_types(data,1)
-
-# ╔═╡ b76bc7d2-3d31-41a4-8ece-e07ef187f99c
-
-
-# ╔═╡ 1805e082-677b-4901-80db-2dca2a873b2d
-for (i,bus) in data["bus"]
-	println("========================")
-	println(i)
-	println(bus["bus_i"])
-	println(bus["index"])
-end
-
-# ╔═╡ 034c3789-dc83-4bf3-8045-5ac677bfb2b7
-sqth = calc_sqth_jacobian_block(data)
-
-# ╔═╡ 28d59501-e7e8-4169-9517-c040f3b37d5e
-est_sqth = J.sqth
-
-# ╔═╡ c8a29be0-8279-428d-aafc-988884df8b24
-spth = calc_spth_jacobian_block(data)
-
-# ╔═╡ 2d566319-c015-4615-ade7-2e9e4a60d28e
-est_spth = J.spth
-
-# ╔═╡ a557566f-220f-4636-afd7-6ace1a85a7ad
-begin
-	p1 = spy(sqth,Guide.xlabel("Bus Index"),Guide.ylabel("Bus Index"))
-	p2 = spy(est_sqth,Guide.xlabel("Bus Index"),Guide.ylabel("Bus Index"))
-	title(hstack(p1,p2),"Estimating Angle Submatrices")
-end
-
-# ╔═╡ fa3b25ab-d8a3-4797-b8ad-241c3951c7f8
-
-
-# ╔═╡ f5708a08-b41c-49a7-880a-be63090ff033
-println(norm(sqth-est_sqth)/norm(sqth)*100,"\n",norm(spth-est_spth)/norm(spth)*100)
-
-# ╔═╡ 87909e3e-ae63-4894-ae64-62d36bbd6053
-"""
-Given a network data dict, generate an AMI dataset corresponding to net active/reactive power injections and voltage magnitudes at all PQ buses.
-"""
-function make_ami_dataset(data::Dict{String,<:Any},sel_bus_types=1,M=100)
-	bus_type_idxs = get_idx_bus_types(data,sel_bus_types)
-	outputs = ["p_gen", "q_gen","vm_gen","vm_bus","va_bus"]
-	ts = create_samples(data,M,output_vars=outputs) #Make time series with OPF learn
-	num_bus = length(data["bus"])
-	#load_bus_idx = [data["load"]["$i"]["load_bus"] for i in 1:length(data["load"])]
-	#gen_bus_idx = [data["gen"][string(i)]["gen_bus"] for i in 1:length(data["gen"])]
-	num_type = length(bus_type_idxs)
-	pnet,qnet,vm = zeros((M,num_bus)),zeros((M,num_bus)),ts["outputs"]["vm_bus"]
-	for (load_idx,load) in data["load"]
-		load_bus_idx = load["load_bus"]
-		load_idx = load["index"]
-		if load_bus_idx ∈ bus_type_idxs
-			pnet[:,load_bus_idx] += ts["inputs"]["pd"][:,load_idx]
-			qnet[:,load_bus_idx] += ts["inputs"]["qd"][:,load_idx]
-		end
-	end
-	for (gen_idx,gen) in data["gen"]
-		gen_bus_idx = gen["gen_bus"]
-		gen_idx = gen["index"]
-		if gen_bus_idx ∈ bus_type_idxs
-			pnet[:,gen_bus_idx] -= ts["outputs"]["p_gen"][:,gen_idx]
-			qnet[:,gen_bus_idx] -= ts["outputs"]["q_gen"][:,gen_idx]
-		end
-	end
-	return Dict(
-		"pnet" => pnet[:,bus_type_idxs], 
-		"qnet" => qnet[:,bus_type_idxs], 
-		"vm" => vm[:,bus_type_idxs])
-end
-
-# ╔═╡ 5a16335f-5209-48a1-8587-5e6f31fa58d9
-dataset = make_ami_dataset(data)
-
-# ╔═╡ 6c67f202-686b-40a5-9965-a2f82ef00c81
-#Test index functionality of powermodels
-begin
-	Ytest = calc_admittance_matrix(data)
-	println(Ytest)
-	for (load_idx,load) in data["load"]
-		load_bus_idx = load["load_bus"]
-		load_idx = load["index"]
-		bus_type = data["bus"][string(load_bus_idx)]
-		println((load_bus_idx,load_idx))
-		println((bus_type))
-	end
-end
-
-
-# ╔═╡ c61ffa45-fe3c-4d68-a942-f54098b453e8
-PowerModels.calc
-
-# ╔═╡ 8595f5e2-1b6e-4819-a4f0-cb693161da81
-"""
-Compute finite differences of time series data
-"""
-function get_finite_diferences(dataset::Dict)
-	pnet,qnet,vm = dataset["pnet"],dataset["qnet"],dataset["vm"]
-	dp,dq,dv = -diff(pnet,dims=1),-diff(qnet,dims=1),diff(vm,dims=1)
-	return Dict("dp" => dp, "dq" => dq, "dv" => dv)
-end
-
-# ╔═╡ 535bfc2a-dd28-4d42-8cf3-9bc8f3ae94db
-diff_data = get_finite_diferences(dataset)
-
-# ╔═╡ 95e9551e-172b-4a57-8734-71972334e589
-est_power_voltage_sens(Δx,Δv,lambd) = inv(Δv'*Δv + lambd*I(size(Δv)[2]))*Δv'*Δx
-
-# ╔═╡ a3f59dd4-b500-484b-96ed-15d220ba3216
-"""
-Given dictionary of deviations, estimate power-to-voltage sensitivities
-"""
-function est_power_voltage_sens(diff_data::Dict,λ=1e-15)
-	Δp,Δq,Δv = diff_data["dp"],diff_data["dq"],diff_data["dv"]
-	spv = est_power_voltage_sens(Δp,Δv,λ)
-	sqv = est_power_voltage_sens(Δq,Δv,λ)
-	return spv,sqv
-end
-
-# ╔═╡ 3e146902-1c43-4d87-85c5-5a6577007583
-"""
-Estimates the power-to-angle sensitivities
-
-Params:
-Δp - MxN matrix of deviations of active power
-Δq - MxN matrix of deviations of reactive power
-Δv - MxN matrix of deviations of bus voltage magnitudes
-λ - ℓ2 regularization
-
-Returns:
-Estimate of ∂p/∂θ,∂q/∂θ
-
-"""
-function est_power_angle_sens(Δp,Δq,Δv,vm,p,q,λ=1e-15)
-	spv,sqv = est_power_voltage_sens(Δp,Δq,Δv,λ)
-	spth,sqth = calc_spth_jacobian_block(sqv,vm,q),calc_sqth_jacobian_block(spv,vm,p)
-	return spth,sqth
-end
-
-# ╔═╡ 1d1bf5c5-a01b-45af-ba66-ca816900b9ab
-"""
-Given dictionary of deviations, estimate the power-to-angle sensitivities
-
-Params:
-*`Δp` - MxN matrix of deviations of active power
-Δq - MxN matrix of deviations of reactive power
-Δv - MxN matrix of deviations of bus voltage magnitudes
-λ - ℓ2 regularization
-
-Returns:
-Estimate of ∂p/∂θ,∂q/∂θ
-
-"""
-function est_power_angle_sens(diff_data::Dict,network_data,λ=1e-15,bus_types::Int=1)
-	Δp,Δq,Δv = diff_data["dp"],diff_data["dq"],diff_data["dv"]
-	idx_bus_types = get_idx_bus_types(network_data,bus_types)
-	vm = abs.(calc_basic_bus_voltage(network_data))[idx_bus_types]
-	p = real(calc_basic_bus_injection(network_data))[idx_bus_types]
-	q = imag(calc_basic_bus_injection(network_data))[idx_bus_types]
-	spv,sqv = est_power_voltage_sens(diff_data,λ)
-	spth,sqth = calc_spth_jacobian_block(sqv,vm,q),calc_sqth_jacobian_block(spv,vm,p)
-	return spth,sqth
-end
-
-# ╔═╡ 479c7dae-62ba-404a-b14b-0dfa44cddb2f
-hat_spth,hat_sqth = est_power_angle_sens(diff_data,data)
-
-# ╔═╡ b91d73dc-b94a-45f2-ab5b-58ec6336030e
-calc_spth_jacobian_block(data)
-
-# ╔═╡ 155d88c3-d3d2-46fb-aae4-9e5fc6a9e94e
-hat_spth
-
-# ╔═╡ b19a5dc3-8ab3-49b2-9ce2-7b4a7548601f
-hat_sqth
-
-# ╔═╡ c0779644-7e11-4b4b-aac2-28db5f135a00
-pq_buses(data)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Gadfly = "c91e804a-d5a3-530f-b6f0-dfbca275c004"
-Ipopt = "b6b21f68-93f8-5de0-b562-5493be1d77c9"
-JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-OPFLearn = "426fd8f4-da10-4833-b320-d1e833f8a26f"
 PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
-SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
-DataFrames = "~1.3.2"
 Gadfly = "~1.3.4"
-Ipopt = "~0.7.0"
-JuMP = "~0.21.10"
-OPFLearn = "~0.1.1"
-PowerModels = "~0.18.4"
+PowerModels = "~0.19.4"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -374,22 +36,11 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 julia_version = "1.7.2"
 manifest_format = "2.0"
 
-[[deps.ASL_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "6252039f98492252f9e47c312c8ffda0e3b9e78d"
-uuid = "ae81ac8f-d209-56e5-92de-9978fef736f9"
-version = "0.1.3+0"
-
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
 git-tree-sha1 = "6f1d9bc1c08f9f4a8fa92e3ea3cb50153a1b40d4"
 uuid = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 version = "1.1.0"
-
-[[deps.AbstractTrees]]
-git-tree-sha1 = "03e0550477d86222521d254b741d470ba17ea0b5"
-uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
-version = "0.3.4"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra"]
@@ -402,9 +53,9 @@ uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 
 [[deps.ArrayInterface]]
 deps = ["Compat", "IfElse", "LinearAlgebra", "Requires", "SparseArrays", "Static"]
-git-tree-sha1 = "9f8186bc19cd1c129d367cb667215517cc03e144"
+git-tree-sha1 = "7c6984e4c68a005292fec1d9e1b5b5ef03b238d8"
 uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "5.0.1"
+version = "5.0.3"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -424,12 +75,6 @@ git-tree-sha1 = "4c10eee4af024676200bc7752e536f858c6b8f93"
 uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 version = "1.3.1"
 
-[[deps.BinaryProvider]]
-deps = ["Libdl", "Logging", "SHA"]
-git-tree-sha1 = "ecdec412a9abc8db54c0efc5548c64dfce072058"
-uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.10"
-
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "19a35467a82e236ff51bc17a3a44b69ef35185a2"
@@ -444,9 +89,9 @@ version = "0.5.1"
 
 [[deps.CategoricalArrays]]
 deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
-git-tree-sha1 = "3b60064cb48efe986179359e08ffb568a6d510a2"
+git-tree-sha1 = "5196120341b6dfe3ee5f33cf97392a05d6fe80d0"
 uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
-version = "0.10.3"
+version = "0.10.4"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
@@ -518,32 +163,16 @@ git-tree-sha1 = "6c9671364c68c1158ac2524ac881536195b7e7bc"
 uuid = "7ad07ef1-bdf2-5661-9d2b-286fd4296dac"
 version = "0.2.0"
 
-[[deps.Crayons]]
-git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
-uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
-version = "4.1.1"
-
 [[deps.DataAPI]]
 git-tree-sha1 = "cc70b17275652eb47bc9e5f81635981f13cea5c8"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.9.0"
-
-[[deps.DataFrames]]
-deps = ["Compat", "DataAPI", "Future", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Reexport", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "ae02104e835f219b8930c7664b8012c93475c340"
-uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.3.2"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
 git-tree-sha1 = "3daef5523dd2e769dad2365274f760ff5f282c7d"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 version = "0.18.11"
-
-[[deps.DataValueInterfaces]]
-git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
-uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
-version = "1.0.0"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -603,11 +232,6 @@ git-tree-sha1 = "90b158083179a6ccbce2c7eb1446d5bf9d7ae571"
 uuid = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
 version = "0.6.7"
 
-[[deps.ExprTools]]
-git-tree-sha1 = "56559bbef6ca5ea0c0818fa5c90320398a6fbf8d"
-uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-version = "0.1.8"
-
 [[deps.FFTW]]
 deps = ["AbstractFFTs", "FFTW_jll", "LinearAlgebra", "MKL_jll", "Preferences", "Reexport"]
 git-tree-sha1 = "505876577b5481e50d089c1c68899dfb6faebc62"
@@ -638,12 +262,6 @@ git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
 version = "0.8.4"
 
-[[deps.Formatting]]
-deps = ["Printf"]
-git-tree-sha1 = "8339d61043228fdd3eb658d86c926cb282ae72a8"
-uuid = "59287772-0a20-5a39-b81b-1366585eb4c0"
-version = "0.4.2"
-
 [[deps.ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
 git-tree-sha1 = "1bd6fc0c344fc0cbee1f42f8d2e7ec8253dda2d2"
@@ -664,12 +282,6 @@ version = "1.3.4"
 git-tree-sha1 = "53bb909d1151e57e2484c3d1b53e19552b887fb2"
 uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
 version = "1.0.2"
-
-[[deps.HTTP]]
-deps = ["Base64", "Dates", "IniFile", "Logging", "MbedTLS", "NetworkOptions", "Sockets", "URIs"]
-git-tree-sha1 = "0fa77022fe4b511826b39c894c90daf5fce3334a"
-uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "0.9.17"
 
 [[deps.Hexagons]]
 deps = ["Test"]
@@ -694,21 +306,10 @@ uuid = "9b13fd28-a010-5f03-acff-a1bbcff69959"
 version = "1.0.0"
 
 [[deps.InfrastructureModels]]
-deps = ["JuMP", "MathOptInterface", "Memento"]
-git-tree-sha1 = "9ef28829a626a0d99c78344ac42c6b44b1e6c270"
+deps = ["JuMP", "Memento"]
+git-tree-sha1 = "0cc6686110dc42aa24e3ca795402e45ab6394425"
 uuid = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
-version = "0.6.2"
-
-[[deps.IniFile]]
-git-tree-sha1 = "f550e6e32074c939295eb5ea6de31849ac2c9625"
-uuid = "83e8ac13-25f8-5344-8a64-a9f2b223428f"
-version = "0.5.1"
-
-[[deps.InlineStrings]]
-deps = ["Parsers"]
-git-tree-sha1 = "61feba885fac3a407465726d0c330b3055df897f"
-uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
-version = "1.1.2"
+version = "0.7.3"
 
 [[deps.IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -732,23 +333,6 @@ git-tree-sha1 = "91b5dcf362c5add98049e6c29ee756910b03051d"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
 version = "0.1.3"
 
-[[deps.InvertedIndices]]
-git-tree-sha1 = "bee5f1ef5bf65df56bdd2e40447590b272a5471f"
-uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
-version = "1.1.0"
-
-[[deps.Ipopt]]
-deps = ["BinaryProvider", "Ipopt_jll", "Libdl", "LinearAlgebra", "MathOptInterface", "MathProgBase"]
-git-tree-sha1 = "380786b4929b8d18d76e909c6b2eca355b7c3bd6"
-uuid = "b6b21f68-93f8-5de0-b562-5493be1d77c9"
-version = "0.7.0"
-
-[[deps.Ipopt_jll]]
-deps = ["ASL_jll", "Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "MUMPS_seq_jll", "OpenBLAS32_jll", "Pkg"]
-git-tree-sha1 = "82124f27743f2802c23fcb05febc517d0b15d86e"
-uuid = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
-version = "3.13.4+2"
-
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "7fd44fd4ff43fc60815f8e764c0f352b83c49151"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -758,11 +342,6 @@ version = "0.1.1"
 git-tree-sha1 = "fa6287a4469f5e048d763df38279ee729fbd44e5"
 uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.4.0"
-
-[[deps.IteratorInterfaceExtensions]]
-git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
-uuid = "82899510-4779-5014-852e-03e436cf321d"
-version = "1.0.0"
 
 [[deps.JLLWrappers]]
 deps = ["Preferences"]
@@ -776,17 +355,11 @@ git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.3"
 
-[[deps.JSONSchema]]
-deps = ["HTTP", "JSON", "URIs"]
-git-tree-sha1 = "2f49f7f86762a0fbbeef84912265a1ae61c4ef80"
-uuid = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
-version = "0.3.4"
-
 [[deps.JuMP]]
-deps = ["Calculus", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MathOptInterface", "MutableArithmetics", "NaNMath", "Printf", "Random", "SparseArrays", "SpecialFunctions", "Statistics"]
-git-tree-sha1 = "4358b7cbf2db36596bdbbe3becc6b9d87e4eb8f5"
+deps = ["Calculus", "DataStructures", "ForwardDiff", "LinearAlgebra", "MathOptInterface", "MutableArithmetics", "NaNMath", "OrderedCollections", "Printf", "SparseArrays", "SpecialFunctions"]
+git-tree-sha1 = "ab093fae27d6ccbb41eb7c8e8c5664b881c79929"
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
-version = "0.21.10"
+version = "0.23.1"
 
 [[deps.Juno]]
 deps = ["Base64", "Logging", "Media", "Profile"]
@@ -841,30 +414,18 @@ version = "0.5.4"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "3f7cb7157ef860c637f3f4929c8ed5d9716933c6"
+git-tree-sha1 = "db0eee9b3bb2b38ab2d94349a3b0272d0a68e21f"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.7"
+version = "0.3.8"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
-
-[[deps.METIS_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "1d31872bb9c5e7ec1f618e8c4a56c8b0d9bddc7e"
-uuid = "d00139f3-1899-568f-a2f0-47f597d42d70"
-version = "5.1.1+0"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
 git-tree-sha1 = "e595b205efd49508358f7dc670a940c790204629"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2022.0.0+0"
-
-[[deps.MUMPS_seq_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "METIS_jll", "OpenBLAS32_jll", "Pkg"]
-git-tree-sha1 = "1a11a84b2af5feb5a62a820574804056cdc59c39"
-uuid = "d7ed1dd3-d0ae-5e8e-bfb4-87a502085b8d"
-version = "5.2.1+4"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
@@ -877,22 +438,10 @@ deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[deps.MathOptInterface]]
-deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "JSON", "JSONSchema", "LinearAlgebra", "MutableArithmetics", "OrderedCollections", "SparseArrays", "Test", "Unicode"]
-git-tree-sha1 = "575644e3c05b258250bb599e57cf73bbf1062901"
+deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "JSON", "LinearAlgebra", "MutableArithmetics", "OrderedCollections", "Printf", "SparseArrays", "Test", "Unicode"]
+git-tree-sha1 = "a62df301482a41cb7b1db095a4e6949ba7eb3349"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-version = "0.9.22"
-
-[[deps.MathProgBase]]
-deps = ["LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "9abbe463a1e9fc507f12a69e7f29346c2cdc472c"
-uuid = "fdba3010-5040-5b88-9595-932c9decdf73"
-version = "0.7.8"
-
-[[deps.MbedTLS]]
-deps = ["Dates", "MbedTLS_jll", "Random", "Sockets"]
-git-tree-sha1 = "1c38e51c3d08ef2278062ebceade0e46cefc96fe"
-uuid = "739be429-bea8-5141-9913-cc70e7f3736d"
-version = "1.0.3"
+version = "1.1.0"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -910,10 +459,10 @@ uuid = "e89f7d12-3494-54d1-8411-f7d8b9ae1f27"
 version = "0.5.0"
 
 [[deps.Memento]]
-deps = ["Dates", "Distributed", "JSON", "Serialization", "Sockets", "Syslogs", "Test", "TimeZones", "UUIDs"]
-git-tree-sha1 = "19650888f97362a2ae6c84f0f5f6cda84c30ac38"
+deps = ["Dates", "Distributed", "Requires", "Serialization", "Sockets", "Test", "UUIDs"]
+git-tree-sha1 = "9b0b0dbf419fbda7b383dc12d108621d26eeb89f"
 uuid = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
-version = "1.2.0"
+version = "1.3.0"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -924,20 +473,14 @@ version = "1.0.2"
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
-[[deps.Mocking]]
-deps = ["Compat", "ExprTools"]
-git-tree-sha1 = "29714d0a7a8083bba8427a4fbfb00a540c681ce7"
-uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
-version = "0.7.3"
-
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
 [[deps.MutableArithmetics]]
 deps = ["LinearAlgebra", "SparseArrays", "Test"]
-git-tree-sha1 = "8d9496b2339095901106961f44718920732616bb"
+git-tree-sha1 = "ba8c0f8732a24facba709388c74ba99dcbfdda1e"
 uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
-version = "0.2.22"
+version = "1.0.0"
 
 [[deps.NLSolversBase]]
 deps = ["DiffResults", "Distributed", "FiniteDiff", "ForwardDiff"]
@@ -959,35 +502,11 @@ version = "0.3.7"
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
-[[deps.OPFLearn]]
-deps = ["Dates", "DelimitedFiles", "Distributed", "InfrastructureModels", "Ipopt", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "OnlineStats", "OnlineStatsBase", "PowerModels", "Random", "StatsBase"]
-git-tree-sha1 = "8355fc191601a20e90adc1e1bea4894da9e445dd"
-uuid = "426fd8f4-da10-4833-b320-d1e833f8a26f"
-version = "0.1.1"
-
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
 git-tree-sha1 = "043017e0bdeff61cfbb7afeb558ab29536bbb5ed"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 version = "1.10.8"
-
-[[deps.OnlineStats]]
-deps = ["AbstractTrees", "Dates", "LinearAlgebra", "OnlineStatsBase", "OrderedCollections", "Random", "RecipesBase", "Statistics", "StatsBase"]
-git-tree-sha1 = "78feae582915781a235912de43280f98e6962a78"
-uuid = "a15396b6-48d5-5d58-9928-6d29437db91e"
-version = "1.5.13"
-
-[[deps.OnlineStatsBase]]
-deps = ["AbstractTrees", "Dates", "LinearAlgebra", "OrderedCollections", "Statistics", "StatsBase"]
-git-tree-sha1 = "287bd0f7ee1cc2a73f08057a7a6fcfe0c23fe4b0"
-uuid = "925886fa-5bf2-5e8e-b522-a9147a512338"
-version = "1.4.9"
-
-[[deps.OpenBLAS32_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "9c6c2ed4b7acd2137b878eb96c68e63b76199d0f"
-uuid = "656ef2d0-ae68-5445-9ca0-591084a874a2"
-version = "0.3.17+0"
 
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
@@ -1010,9 +529,9 @@ version = "1.4.1"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "7e2166042d1698b6072352c74cfd1fca2a968253"
+git-tree-sha1 = "e8185b83b9fc56eb6456200e873ce598ebc7f262"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.11.6"
+version = "0.11.7"
 
 [[deps.Parameters]]
 deps = ["OrderedCollections", "UnPack"]
@@ -1030,29 +549,17 @@ version = "2.2.3"
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
-[[deps.PooledArrays]]
-deps = ["DataAPI", "Future"]
-git-tree-sha1 = "db3a23166af8aebf4db5ef87ac5b00d36eb771e2"
-uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
-version = "1.4.0"
-
 [[deps.PowerModels]]
-deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "Memento", "NLsolve", "SparseArrays"]
-git-tree-sha1 = "6c604c9c2bc232f420c428e8903e7fcb5a7df0fb"
+deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "Memento", "NLsolve", "SparseArrays"]
+git-tree-sha1 = "3766950ccc012e9a568f16e681f4c6b8afc64c41"
 uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
-version = "0.18.4"
+version = "0.19.4"
 
 [[deps.Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "de893592a221142f3db370f48290e3a2ef39998f"
+git-tree-sha1 = "d3538e7f8a790dc8903519090857ef8e1283eecd"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.2.4"
-
-[[deps.PrettyTables]]
-deps = ["Crayons", "Formatting", "Markdown", "Reexport", "Tables"]
-git-tree-sha1 = "dfb54c4e414caa595a1f2ed759b160f5a3ddcba5"
-uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "1.3.1"
+version = "1.2.5"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1081,11 +588,6 @@ deps = ["Requires"]
 git-tree-sha1 = "dc84268fe0e3335a62e315a3a7cf2afa7178a734"
 uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
 version = "0.4.3"
-
-[[deps.RecipesBase]]
-git-tree-sha1 = "6bf3f380ff52ce0832ddd3a2a7b9538ed1bcca7d"
-uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-version = "1.2.1"
 
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -1141,9 +643,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SpecialFunctions]]
 deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "cbf21db885f478e4bd73b286af6e67d1beeebe4c"
+git-tree-sha1 = "5ba658aeecaaf96923dce0da9e703bd1fe7666f9"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "1.8.4"
+version = "2.1.4"
 
 [[deps.Static]]
 deps = ["IfElse"]
@@ -1183,27 +685,9 @@ version = "0.9.16"
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
-[[deps.Syslogs]]
-deps = ["Printf", "Sockets"]
-git-tree-sha1 = "46badfcc7c6e74535cc7d833a91f4ac4f805f86d"
-uuid = "cea106d9-e007-5e6c-ad93-58fe2094e9c4"
-version = "0.3.0"
-
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-
-[[deps.TableTraits]]
-deps = ["IteratorInterfaceExtensions"]
-git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
-uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
-version = "1.0.1"
-
-[[deps.Tables]]
-deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "OrderedCollections", "TableTraits", "Test"]
-git-tree-sha1 = "5ce79ce186cc678bbb5c5681ca3379d1ddae11a1"
-uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "1.7.0"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
@@ -1213,22 +697,11 @@ uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[[deps.TimeZones]]
-deps = ["Dates", "Downloads", "InlineStrings", "LazyArtifacts", "Mocking", "Printf", "RecipesBase", "Serialization", "Unicode"]
-git-tree-sha1 = "2d4b6de8676b34525ac518de36006dc2e89c7e2e"
-uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
-version = "1.7.2"
-
 [[deps.TranscodingStreams]]
 deps = ["Random", "Test"]
 git-tree-sha1 = "216b95ea110b5972db65aa90f88d8d89dcb8851c"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.9.6"
-
-[[deps.URIs]]
-git-tree-sha1 = "97bbe755a53fe859669cd907f2d96aee8d2c1355"
-uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.3.0"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -1266,44 +739,8 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 """
 
 # ╔═╡ Cell order:
-# ╠═3a02936c-9fcc-11ec-2bee-270c8626402c
-# ╠═dfb0816c-aeda-4124-957a-f439fe8dde28
-# ╠═436a43d6-4d70-4eba-9f29-b198f4ba9ebe
-# ╠═cc904d3d-d426-4da0-81ac-052fb021d262
-# ╠═a8fdadc0-a662-4767-b9b9-5860d2b4f510
-# ╠═cf94627d-6cba-4720-a07a-fe685e5a31d0
-# ╠═88ad817d-5292-44f7-ba65-8e36163d4780
-# ╠═672e2a92-c90a-43e2-a143-cfb1ea4f6c0b
-# ╠═8c1e987a-8124-4a46-a89c-ef31aeba4f32
-# ╠═9a66a455-aeb0-4e18-b50b-5945227b3e63
-# ╠═b4236c4e-cd36-4d77-900b-c4538ae4dc59
-# ╠═738f2979-c6a2-4c0d-9339-d7143164b511
-# ╠═24193ad5-8e28-4351-bcc7-ebe902b9b8a7
-# ╠═b390b38c-e5ae-4f4b-bfdb-ed54dcad1582
-# ╠═251026c2-d8ba-444b-94e8-10b6eb8c7afe
-# ╠═b76bc7d2-3d31-41a4-8ece-e07ef187f99c
-# ╠═1805e082-677b-4901-80db-2dca2a873b2d
-# ╠═034c3789-dc83-4bf3-8045-5ac677bfb2b7
-# ╠═28d59501-e7e8-4169-9517-c040f3b37d5e
-# ╠═c8a29be0-8279-428d-aafc-988884df8b24
-# ╠═2d566319-c015-4615-ade7-2e9e4a60d28e
-# ╠═a557566f-220f-4636-afd7-6ace1a85a7ad
-# ╠═fa3b25ab-d8a3-4797-b8ad-241c3951c7f8
-# ╠═f5708a08-b41c-49a7-880a-be63090ff033
-# ╠═87909e3e-ae63-4894-ae64-62d36bbd6053
-# ╠═5a16335f-5209-48a1-8587-5e6f31fa58d9
-# ╠═6c67f202-686b-40a5-9965-a2f82ef00c81
-# ╠═c61ffa45-fe3c-4d68-a942-f54098b453e8
-# ╠═8595f5e2-1b6e-4819-a4f0-cb693161da81
-# ╠═535bfc2a-dd28-4d42-8cf3-9bc8f3ae94db
-# ╠═95e9551e-172b-4a57-8734-71972334e589
-# ╠═a3f59dd4-b500-484b-96ed-15d220ba3216
-# ╠═3e146902-1c43-4d87-85c5-5a6577007583
-# ╠═1d1bf5c5-a01b-45af-ba66-ca816900b9ab
-# ╠═479c7dae-62ba-404a-b14b-0dfa44cddb2f
-# ╠═b91d73dc-b94a-45f2-ab5b-58ec6336030e
-# ╠═155d88c3-d3d2-46fb-aae4-9e5fc6a9e94e
-# ╠═b19a5dc3-8ab3-49b2-9ce2-7b4a7548601f
-# ╠═c0779644-7e11-4b4b-aac2-28db5f135a00
+# ╠═bf7c122a-a2e7-11ec-3063-0bcff1909553
+# ╠═2bdb4883-577b-4958-a160-75e5c96a8505
+# ╠═9fa1bfa6-e03c-4813-a793-7f88302fd3f3
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
