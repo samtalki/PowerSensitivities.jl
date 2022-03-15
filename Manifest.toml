@@ -551,6 +551,18 @@ git-tree-sha1 = "de4a6f9e7c4710ced6838ca906f81905f7385fd6"
 uuid = "a1b4810d-1bce-5fbd-ac56-80944d57a21f"
 version = "0.2.0"
 
+[[deps.HiGHS]]
+deps = ["HiGHS_jll", "MathOptInterface", "SparseArrays"]
+git-tree-sha1 = "fd85cc638ce88f62d9132a6ba460eeb177f05400"
+uuid = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+version = "0.2.3"
+
+[[deps.HiGHS_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "4878dd0d169d2b139af76479c0faa07cd19d4452"
+uuid = "8fd58aa0-07eb-5a78-9b36-339c94fd15ea"
+version = "0.3.2+0"
+
 [[deps.HypergeometricFunctions]]
 deps = ["DualNumbers", "LinearAlgebra", "SpecialFunctions", "Test"]
 git-tree-sha1 = "65e4589030ef3c44d3b90bdc5aac462b4bb05567"
