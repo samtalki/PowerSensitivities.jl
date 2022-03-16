@@ -1,12 +1,12 @@
 """
 Given a network data dict, find the bus indeces that match `sel_bus_types`.
 """
-function get_idx_bus_types(data,sel_bus_types=1)
-	num_bus = length(data["bus"])
-	bus_types = [data["bus"][string(i)]["bus_type"] for i in 1:num_bus]
-    idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
-    return idx_sel_bus_types
-end
+# function get_idx_bus_types(data,sel_bus_types=1)
+# 	num_bus = length(data["bus"])
+# 	bus_types = [data["bus"][string(i)]["bus_type"] for i in 1:num_bus]
+#     idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
+#     return idx_sel_bus_types
+# end
 
 function make_timeseries_dataset(network_data,N=100)
 	outputs = ["p_gen", "q_gen","vm_gen","vm_bus","va_bus"]
@@ -18,7 +18,7 @@ end
 Given a network data dict, generate an AMI dataset corresponding to net active/reactive power injections and voltage magnitudes at all PQ buses.
 """
 function make_ami_dataset(data::Dict{String,<:Any},sel_bus_types=1,M=100)
-	bus_type_idxs = get_idx_bus_types(data,sel_bus_types)
+	bus_type_idxs = calc_bus_idx_of_type(data,sel_bus_types)
 	outputs = ["p_gen", "q_gen","vm_gen","vm_bus","va_bus"]
 	ts = create_samples(data,M,output_vars=outputs) #Make time series with OPF learn
 	num_bus = length(data["bus"])
@@ -52,7 +52,7 @@ end
 """
 Compute finite differences of time series data
 """
-function get_finite_diferences(dataset::Dict)
+function calc_finite_differences(dataset::Dict)
 	pnet,qnet,vm = dataset["pnet"],dataset["qnet"],dataset["vm"]
 	dp,dq,dv = -diff(pnet,dims=1),-diff(qnet,dims=1),diff(vm,dims=1)
 	return Dict("dp" => dp, "dq" => dq, "dv" => dv)

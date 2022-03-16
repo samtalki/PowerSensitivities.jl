@@ -15,7 +15,7 @@ end
 network = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
 
 # ╔═╡ 9fa1bfa6-e03c-4813-a793-7f88302fd3f3
-
+pwd()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
