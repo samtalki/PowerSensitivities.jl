@@ -1,5 +1,5 @@
 include("PowerSensitivities.jl")
-using .PowerSensitivities
+import .PowerSensitivities
 using PowerModels
 using PowerModelsAnalytics
 using LinearAlgebra
@@ -49,7 +49,7 @@ function test_thm1(sel_bus_types=[1,2],network_data_path="/home/sam/github/Power
     results = Dict()
     for (name,path) in zip(names,paths)
         network = make_basic_network(parse_file(path));
-        results[name] = calc_vmag_condition(network,sel_bus_types)
+        results[name] = PowerSensitivities.calc_vmag_condition(network,sel_bus_types)
     end
     return results
 end
@@ -66,12 +66,12 @@ function test_assumption1(sel_bus_types=[1,2],network_data_path="/home/sam/githu
     for (name,path) in zip(names,paths)
         data = make_basic_network(parse_file(path));
 		J = try
-            calc_jacobian_matrix(data,sel_bus_types);
+            PowerSensitivities.calc_jacobian_matrix(data,sel_bus_types);
         catch
             println("Jacobian cannot be computed for "*name)
             continue
         end
-		Y = Matrix(calc_basic_admittance_matrix(data))
+		Y = Matrix(calc_basic_admittance_matrix(data));
 		Jmat = Matrix(J.matrix)
 		spth = Matrix(J.pth)
         sqth = Matrix(J.qth)
@@ -96,14 +96,14 @@ end
 
 
 #Test assumption 1
-results_all,J_all = test_assumption1([1,2,3])
-results_pq_pv,J_pq_pv = test_assumption1([1,2])
-results_pq,J_pq = test_assumption1([1])
+results_all,J_all = test_assumption1([1,2,3]);
+results_pq_pv,J_pq_pv = test_assumption1([1,2]);
+results_pq,J_pq = test_assumption1([1]);
 
 
 #Test Theorem 1 bounds
-thm1_pq = test_thm1([1])
-thm1_pq_pv = test_thm1([1,2])
+thm1_pq = test_thm1([1]);
+thm1_pq_pv = test_thm1([1,2]);
 
 #Get the maximum power factor distances
 delta_pf_max_pq,delta_pf_max_pq_pv = Dict(),Dict()
@@ -119,12 +119,12 @@ case3 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/da
 case5 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
 case24 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case24.m"))
 case14 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case14.m"))
-J_c3 = calc_jacobian_matrix(case3)
-J_c5 = calc_jacobian_matrix(case5)
+J_c3 = PowerSensitivities.calc_jacobian_matrix(case3)
+J_c5 = PowerSensitivities.calc_jacobian_matrix(case5)
 J_c24_full = calc_basic_jacobian_matrix(case24)
-J_c24_blocks = calc_jacobian_matrix(case24)
-J_c24_blocks_pq_pv = calc_jacobian_matrix(case24,[1,2])
-J_c24_blocks_pq = calc_jacobian_matrix(case24,[1])
+J_c24_blocks = PowerSensitivities.calc_jacobian_matrix(case24)
+J_c24_blocks_pq_pv = PowerSensitivities.calc_jacobian_matrix(case24,[1,2])
+J_c24_blocks_pq = PowerSensitivities.calc_jacobian_matrix(case24,[1])
 
 
 

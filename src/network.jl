@@ -77,14 +77,14 @@ Given a maximum difference Δk_max between the Q-P sensitivities,
 Calculate the maximum power factor distance
 """
 function calc_max_pf_distance(Δk_max)
-    model = Model(Ipopt.Optimizer)
-    @variable(model, 1 >= pf_min >= 0)
-    @variable(model, 1>= pf_max >= 0)
-    @objective(model, Max, pf_max - pf_min)
-    @NLconstraint(model, (sqrt(1-pf_min^2)/pf_min) - (sqrt(1-pf_max^2)/pf_max) <= Δk_max  )
-    optimize!(model)
-    pf_min,pf_max = value(pf_min),value(pf_max)
-    Δpf_max = pf_max - pf_min
+    model = Model(Ipopt.Optimizer);
+    @variable(model, 1 >= pf_min >= 0);
+    @variable(model, 1>= pf_max >= 0);
+    @objective(model, Max, pf_max - pf_min);
+    @NLconstraint(model, (sqrt(1-pf_min^2)/pf_min) - (sqrt(1-pf_max^2)/pf_max) <= Δk_max  );
+    optimize!(model);
+    pf_min,pf_max = value(pf_min),value(pf_max);
+    Δpf_max = pf_max - pf_min;
     return Δpf_max
 end
 
