@@ -32,9 +32,8 @@ function is_radial(network::Dict{String,<:Any})
 
     #Get admittance matrix and the sum of nonzero upper and lower off diagonal elements
     Y = calc_basic_admittance_matrix(network)
-    nz_upper = nonzeros(upper_off_diag(Y))
-    nz_lower = nonzeros(lower_off_diag(Y))
-    
+    nz_upper = sum([1 for y_ij in upper_off_diag(Y) if y_ij != 0])
+    nz_lower = sum([1 for y_ij in lower_off_diag(Y) if y_ij != 0])
     n = size(Y)[1]
     if sum(nz_upper)>n-1 || sum(nz_lower) >n-1
         return false
