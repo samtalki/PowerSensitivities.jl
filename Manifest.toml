@@ -1554,9 +1554,9 @@ version = "0.3.0"
 
 [[deps.Turing]]
 deps = ["AbstractMCMC", "AdvancedHMC", "AdvancedMH", "AdvancedPS", "AdvancedVI", "BangBang", "Bijectors", "DataStructures", "Distributions", "DistributionsAD", "DocStringExtensions", "DynamicPPL", "EllipticalSliceSampling", "ForwardDiff", "Libtask", "LinearAlgebra", "MCMCChains", "NamedArrays", "Printf", "Random", "Reexport", "Requires", "SciMLBase", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Tracker", "ZygoteRules"]
-git-tree-sha1 = "71cfffa8bed8a58ac750a9d8178c751449afdd76"
+git-tree-sha1 = "ef0fdc72023c4480a9372f32db88cce68b186e8a"
 uuid = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
-version = "0.21.0"
+version = "0.21.1"
 
 [[deps.URIParser]]
 deps = ["Unicode"]

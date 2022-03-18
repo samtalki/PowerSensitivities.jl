@@ -5,6 +5,7 @@ using JuMP, Ipopt
 using TimeSeries
 using LinearAlgebra
 import SparseArrays
+using Flux
 PowerModels.silence()
 
 include("jacobian_matrix.jl")
@@ -23,5 +24,6 @@ export calc_bus_idx_of_type
 export calc_pth_jacobian, calc_qth_jacobian
 export calc_pv_jacobian, calc_qv_jacobian
 export make_ami_dataset,make_timeseries_dataset,calc_finite_differences
-
+export set_network_load
+export calc_jacobian_timeseries
 end

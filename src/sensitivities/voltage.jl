@@ -22,6 +22,7 @@ function calc_pv_jacobian(network::Dict{String,<:Any})
     G,B = real.(Y),imag.(Y)
     ∂p∂v = zeros((n,n))
     for (i,p_i) in enumerate(p)
+        v_i = vm[i]
         for (k,v_k) in enumerate(vm)
             if i==k
                 ∂p∂v[i,i] = (p_i/v_k) + G[i,k]*v_k

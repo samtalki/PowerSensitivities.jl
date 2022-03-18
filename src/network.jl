@@ -1,3 +1,20 @@
+""" 
+Sets the load values in the net to the given load profile
+specified in a 2*n_load x 1 array of n_load real then n_load
+reactive load powers.
+"""
+function set_network_load(network::Dict{String,<:Any}, new_load; scale_load=true)
+    if scale_load
+		new_load = new_load * 1 / network["baseMVA"]
+	end
+    num_loads = length(network["load"])
+    for load in values(network["load"])
+        load_index = load["index"]
+        load["pd"] = float(new_load[load_index][1])
+        load["qd"] = float(new_load[load_index + num_loads][1])
+	end
+end
+
 """
 Given a network data dict, calculate the nodal power factors
 """

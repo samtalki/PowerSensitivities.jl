@@ -41,10 +41,11 @@ Calculate ∂p/∂θ block of the power flow Jacobian
 function calc_pth_jacobian(∂q∂v::AbstractMatrix,vm::AbstractVector,q::AbstractVector)
     n = length(vm)
     ∂p∂θ = zeros((n,n))
-    for (i,q_i) in enumerate(q)
+    for i in 1:n
         for (k,v_k) in enumerate(vm)
+            q_k = q[k]
             if i==k
-                ∂p∂θ[i,i] = v_k*∂q∂v[i,i] - 2*q_i
+                ∂p∂θ[i,i] = v_k*(∂q∂v[i,i] - 2*q_k)
             else
                 ∂p∂θ[i,k] = v_k*∂q∂v[i,k]
             end
@@ -96,10 +97,11 @@ Calculate the ∂q/∂θ Jacobian block
 function calc_qth_jacobian(∂p∂v::AbstractMatrix,vm::AbstractVector,p::AbstractVector)
     n = length(vm)
     ∂q∂θ = zeros((n,n))
-    for (i,p_i) in enumerate(p)
+    for i in 1:n
         for (k,v_k) in enumerate(vm)
+            p_k = p[k]
             if i==k
-                ∂q∂θ[i,k] = -v_k*∂p∂v[i,k] + 2*p_i
+                ∂q∂θ[i,k] = -v_k*(∂p∂v[i,k] + 2*p_k)
             else
                 ∂q∂θ[i,k] = -v_k*∂p∂v[i,k]
             end

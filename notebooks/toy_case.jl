@@ -14,6 +14,9 @@ end
 # ╔═╡ 2bdb4883-577b-4958-a160-75e5c96a8505
 network = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
 
+# ╔═╡ 111218b9-05f9-47c4-9467-17f38fc4e012
+
+
 # ╔═╡ 9fa1bfa6-e03c-4813-a793-7f88302fd3f3
 pwd()
 
@@ -741,6 +744,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╠═bf7c122a-a2e7-11ec-3063-0bcff1909553
 # ╠═2bdb4883-577b-4958-a160-75e5c96a8505
+# ╠═111218b9-05f9-47c4-9467-17f38fc4e012
 # ╠═9fa1bfa6-e03c-4813-a793-7f88302fd3f3
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
