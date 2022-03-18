@@ -3,7 +3,7 @@ using PowerModels,OPFLearn
 using JuMP, Ipopt 
 using TimeSeries
 using LinearAlgebra
-import SparseArrays
+using SparseArrays
 using Flux
 PowerModels.silence()
 

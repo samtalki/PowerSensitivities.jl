@@ -1,14 +1,6 @@
-struct AMI
-	p::Matrix
-	q::Matrix
-	v::Matrix
-end
-
 struct VoltageSensitivities
 	spv::Matrix
 	sqv::Matrix
-	svp::Matrix
-	svq::Matrix
 end
 
 """
@@ -57,14 +49,6 @@ end
 
 est_power_voltage_sens(x,Δv,λ=nothing) = inv(Δv'*Δv + λ*eye(size(Δv)[2]))*Δv'*x
 
-"""
-Compute finite differences of time series data
-"""
-function get_finite_diferences(pd,pg,qd,qg,vm)
-	pnet,qnet = pd-pg,qd-qg
-	dp,dq,dv = diff(pnet),diff(qnet),diff(vm)
-	return Dict("dp" => dp, "dq" => dq, "dv" => dv)
-end
 
 """
 Estimates the power-to-angle sensitivities
@@ -91,7 +75,8 @@ end
 Given dictionary of deviations, estimate power-to-voltage sensitivities
 """
 function est_power_voltage_sens(diff_data::Dict,λ=1e-15)
-	Δp,Δq,Δv = diff_data["dp"],diff_data["dq"],diff_data["dv"]
+	one_vec = ones(size(diff_data["dp"])[1])
+	Δp,Δq,Δv = [diff_data["dp"] one_vec],[diff_data["dq"] one_vec],[diff_data["dv"] one_vec]
 	spv = est_power_voltage_sens(Δp,Δv,λ)
 	sqv = est_power_voltage_sens(Δq,Δv,λ)
 	return spv,sqv

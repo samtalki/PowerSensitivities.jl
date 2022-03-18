@@ -41,58 +41,129 @@ Check if symmetric part of a matrix is positive definite
 """
 symmetric_part_pd(M) = ispd(0.5*(M +transpose(M)))
 
+#Test case path
+network_data_path="/home/sam/github/PowerSensitivities.jl/data/radial_test/"
 
 
-function test_thm1(sel_bus_types=[1,2],network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/")
+"""
+Test theorem 1 for all feeder models in network_data_path
+"""
+function test_thm1(sel_bus_types=[1,2],network_data_path=network_data_path)
     names = readdir(network_data_path);
     paths = readdir(network_data_path,join=true);
     results = Dict()
     for (name,path) in zip(names,paths)
-        network = make_basic_network(parse_file(path));
-        results[name] = PowerSensitivities.calc_vmag_condition(network,sel_bus_types)
+        network =  try
+            make_basic_network(parse_file(path));
+        catch
+            println("PM cannot parse "*name)
+            continue
+        end
+        if PowerSensitivities.is_radial(network)
+            results[name] = PowerSensitivities.calc_vmag_condition(network,sel_bus_types)
+        end
     end
     return results
 end
 
 
 """
-Test assumption 1
+Test assumption 1 for all feeder models in folder network_data_path
 """
-function test_assumption1(sel_bus_types=[1,2],network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/")
+function test_assumption1(sel_bus_types=[1,2],network_data_path=network_data_path)
 	names = readdir(network_data_path);
     paths = readdir(network_data_path,join=true);
     results = Dict()
 	full_J_matrices = Dict()
     for (name,path) in zip(names,paths)
-        data = make_basic_network(parse_file(path));
-		J = try
-            PowerSensitivities.calc_jacobian_matrix(data,sel_bus_types);
+        data = try
+            make_basic_network(parse_file(path));
         catch
-            println("Jacobian cannot be computed for "*name)
+            println("PM cannot parse "*name)
             continue
         end
-		Y = Matrix(calc_basic_admittance_matrix(data));
-		Jmat = Matrix(J.matrix)
-		spth = Matrix(J.pth)
-        sqth = Matrix(J.qth)
-		info = Dict(
-			"n_slack_node" => length(findall(d -> d["bus_type"] ==3, data["bus"])),
-			"slack_nodes" => findall(d -> d["bus_type"] ==3, data["bus"]),
-            "dpdth_pd" => ispd(spth),
-			"y_symmetric" => issymmetric(Y),
-			"dpdth_symmetric" => issymmetric(spth),
-            "J_nonsingular" => isinvertible(Jmat),
-            "sym_dpdth_pd" => symmetric_part_pd(spth),
-            "sym_dqdth_nsd" => symmetric_part_nsd(sqth),
-            #"norm(spth-spth')" => symmetricdiff(spth),
-			#"rel(spth-spth')" => symmetricdiff(spth)/norm(spth)
-        )
-		full_J_matrices[name] = calc_basic_jacobian_matrix(data)
-        results[name] = info
+        if PowerSensitivities.is_radial(data)
+            J = try
+                PowerSensitivities.calc_jacobian_matrix(data,sel_bus_types);
+            catch
+                println("Jacobian cannot be computed for "*name)
+                continue
+            end
+            Y = Matrix(calc_basic_admittance_matrix(data));
+            Jmat = Matrix(J.matrix)
+            spth = Matrix(J.pth)
+            sqth = Matrix(J.qth)
+            info = Dict(
+                "n_slack_node" => length(findall(d -> d["bus_type"] ==3, data["bus"])),
+                "slack_nodes" => findall(d -> d["bus_type"] ==3, data["bus"]),
+                "dpdth_pd" => ispd(spth),
+                "y_symmetric" => issymmetric(Y),
+                "dpdth_symmetric" => issymmetric(spth),
+                "J_nonsingular" => isinvertible(Jmat),
+                "sym_dpdth_pd" => symmetric_part_pd(spth),
+                "sym_dqdth_nsd" => symmetric_part_nsd(sqth),
+                #"norm(spth-spth')" => symmetricdiff(spth),
+                #"rel(spth-spth')" => symmetricdiff(spth)/norm(spth)
+            )
+            full_J_matrices[name] = calc_basic_jacobian_matrix(data)
+            results[name] = info
+        else
+            continue
+        end
     end
     return results,full_J_matrices
 end
 
+
+"""
+Given a network data dict, calculate the S† matrix.
+"""
+function calc_sdag_matrix(network,sel_bus_types)
+    #Compute the analytical S̃ matrix
+    sel_bus_idxs = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    J = PowerSensitivities.calc_jacobian_matrix(network,sel_bus_types)
+    invJ = inv(Matrix(J.matrix)) #Calculate inverse of jacobian
+    n = length(sel_bus_idxs)
+    #Calculate S_tilde, SPV, and SQV
+    S̃ = invJ[n+1:end,1:end] 
+    SPV = S̃[:,1:n]
+    SQV = S̃[:,n+1:end]
+    #Calculate the S† = (Spv + SqvK) matrix
+    K = PowerSensitivities.calc_K_matrix(network,sel_bus_types)
+    Sdag = SPV + SQV*K
+    return Sdag
+end
+
+
+"""
+Given a file of test cases, calculate a test of the compelx power injection estimation using the analytical jacobian blocks
+"""
+function test_complex_injection_est(sel_bus_types=[1,2],network_data_path=network_data_path)
+    names = readdir(network_data_path);
+    paths = readdir(network_data_path,join=true);
+    results = Dict()
+    for (name,path) in zip(names,paths)
+        network =  try
+            make_basic_network(parse_file(path));
+        catch
+            println("PM cannot parse "*name)
+            continue
+        end
+        if PowerSensitivities.is_radial(network)
+            sel_bus_idxs = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+            s_inj = calc_basic_bus_injection(network)[sel_bus_idxs] #bus injection
+            v = calc_basic_bus_voltage(network)[sel_bus_idxs]
+            vm,va = abs.(v),angle.(v)
+            p, q = real.(s_inj),imag.(s_inj)
+            K = PowerSensitivities.calc_K_matrix(network,sel_bus_types)
+            Sdag = calc_sdag_matrix(network,sel_bus_types)
+            hat_p = LinearAlgebra.pinv(Sdag)*p
+            hat_q = K*hat_p  
+            results[name] = Dict("p" => p, "hat_p"=>hat_p, "q" => q, "hat_q" => hat_q)
+        end
+    end
+    return results
+end
 
 
 #Test assumption 1
@@ -105,7 +176,7 @@ results_pq,J_pq = test_assumption1([1]);
 thm1_pq = test_thm1([1]);
 thm1_pq_pv = test_thm1([1,2]);
 
-#Get the maximum power factor distances
+#Test for the maximum power factor distances
 delta_pf_max_pq,delta_pf_max_pq_pv = Dict(),Dict()
 for (name,d) in thm1_pq
     delta_pf_max_pq[name] = d["Δpf_max"]
@@ -113,6 +184,11 @@ end
 for (name,d) in thm1_pq_pv
     delta_pf_max_pq_pv[name] = d["Δpf_max"]
 end
+
+#Test the complex power injection estimation
+complex_est_results_pq = test_complex_injection_est([1])
+complex_est_results_pq_pv = test_complex_injection_est([1,2])
+
 
 # Auxillary data for testing
 case3 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case3.m"))
