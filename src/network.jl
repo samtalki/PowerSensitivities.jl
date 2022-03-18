@@ -15,6 +15,34 @@ function set_network_load(network::Dict{String,<:Any}, new_load; scale_load=true
 	end
 end
 
+
+
+"""
+Given a network data dict, check if the network is radial
+"""
+function is_radial(network::Dict{String,<:Any})
+    
+    function upper_off_diag(A::AbstractMatrix)
+        [A[i] for i in CartesianIndices(A) if i[1] > i[2]]
+    end 
+    
+    function lower_off_diag(A::AbstractMatrix)
+        [A[i] for i in CartesianIndices(A) if i[1]<i[2]]
+    end
+
+    #Get admittance matrix and the sum of nonzero upper and lower off diagonal elements
+    Y = calc_basic_admittance_matrix(network)
+    nz_upper = nonzeros(upper_off_diag(Y))
+    nz_lower = nonzeros(lower_off_diag(Y))
+    
+    n = size(Y)[1]
+    if sum(nz_upper)>n-1 || sum(nz_lower) >n-1
+        return false
+    else
+        return true
+    end
+end
+
 """
 Given a network data dict, calculate the nodal power factors
 """
