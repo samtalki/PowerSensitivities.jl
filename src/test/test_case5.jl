@@ -1,12 +1,13 @@
 ### Test the results for case 5
 include("/home/sam/github/PowerSensitivities.jl/src/PowerSensitivities.jl")
-import .PowerSensitivities
 using PowerModels
 using PowerModelsAnalytics
 using LinearAlgebra
 using Ipopt
 using JuMP
 using Gadfly
+import .PowerSensitivities
+const ps = PowerSensitivities
 
 
 #Load Case 5
@@ -19,14 +20,14 @@ pnet,qnet,vm = diff_data["pnet"],diff_data[""]
 pnet,qnet,vm = diff_data["pnet"],diff_data[""]
 
 #Calculate full Jacobian
-J = PowerSensitivities.calc_jacobian_matrix(case5)
+J = ps.calc_jacobian_matrix(case5)
 
 #Calculate Jacobian for PQ buses only
-J_pq = PowerSensitivities.calc_jacobian_matrix(case5,[1]) #1 -- pq buses only
+J_pq = ps.calc_jacobian_matrix(case5,[1]) #1 -- pq buses only
 S = inv(Matrix(J_pq.matrix)) #get the sensitivity matrix
 dpdv_true,dqdv_true = S[2,1],S[2,2]
 
 #Estimate sensitivities
 λ=0 #ℓ2 regularization
-pf = PowerSensitivities.calc_basic_power_factor(c5,[1])
-spv,sqv = PowerSensitivities.est_power_voltage_sens(diff_data,λ)
+pf = ps.calc_basic_power_factor(c5,[1])
+spv,sqv = ps.est_power_voltage_sens(diff_data,λ)
