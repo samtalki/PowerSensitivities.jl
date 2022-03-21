@@ -88,7 +88,7 @@ end
 
 
 """
-Given network data dict, calculate the maximum difference between the nodal power factors
+Given network data dict, calculate the maximum value of the K matrix
 """
 function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types);
@@ -108,7 +108,7 @@ function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
             pf_i = cos(θi)
             k_ii = abs(sqrt(1-pf_i^2)/pf_i)
         end
-        if(k_ii>k_max)
+        if k_ii>k_max
             k_max = k_ii     
         end
     end
