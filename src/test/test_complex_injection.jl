@@ -1,3 +1,5 @@
+network_data_path="/home/sam/github/PowerSensitivities.jl/data/radial_test/"
+
 struct Sensitivities
     vp::AbstractMatrix
     vq::AbstractMatrix

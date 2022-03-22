@@ -42,8 +42,8 @@ Check if symmetric part of a matrix is positive definite
 symmetric_part_pd(M) = ispd(0.5*(M +transpose(M)))
 
 #Test case path
-network_data_path="/home/sam/github/PowerSensitivities.jl/data/radial_test/"
- 
+network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
+not_require_radial = true #whether to require test feeder is radial
 
 """
 Test assumption 1 for all feeder models in folder network_data_path
@@ -59,7 +59,7 @@ function test_assumption1(sel_bus_types=[1,2],network_data_path=network_data_pat
             println("PM cannot parse "*name)
             continue
         end
-        if PowerSensitivities.is_radial(data)
+        if PowerSensitivities.is_radial(data) || not_require_radial
             J = try
                 PowerSensitivities.calc_jacobian_matrix(data,sel_bus_types);
             catch
@@ -103,7 +103,7 @@ function test_thm1(sel_bus_types=[1,2],network_data_path=network_data_path)
             println("PM cannot parse "*name)
             continue
         end
-        if PowerSensitivities.is_radial(network)
+        if PowerSensitivities.is_radial(network) || not_require_radial
             results[name] = PowerSensitivities.calc_vmag_condition(network,sel_bus_types)
         end
     end
