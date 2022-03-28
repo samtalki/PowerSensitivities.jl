@@ -2,6 +2,7 @@ module PowerSensitivities
 using PowerModels,OPFLearn
 using JuMP, Ipopt 
 using TimeSeries
+using Statistics
 using LinearAlgebra
 using SparseArrays
 using Flux

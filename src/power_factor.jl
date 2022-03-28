@@ -48,13 +48,17 @@ function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2]
     return pf
 end
 
+################################### TODO: Fix [idx_sel_bus_types]
 """
 Given a network data dict, calculate the Δk value for the current operating point
 """
-function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2])
+function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    pf = calc_basic_power_factor(network,sel_bus_types)
-    Δk = try 
+    pf = calc_basic_power_factor(network,sel_bus_types)[idx_sel_bus_types]
+    s = calc_basic_bus_injection(network)[idx_sel_bus_types]
+    p,q = real.(s),imag.(s)
+    pf = [pf_i for (i,pf_i) in enumerate(pf) if abs(p[i])≥ϵ && abs(q[i]≥ϵ)]
+    try 
         abs(k(maximum(pf)) - k(minimum(pf)))
     catch
         Δk = nothing
@@ -78,7 +82,7 @@ end
 """
 Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
 """
-function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
+function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
     s = calc_basic_bus_injection(network)[idx_sel_bus_types];
     p,q = real.(s),imag.(s)
@@ -86,14 +90,19 @@ function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     pf = calc_basic_power_factor(network,sel_bus_types)
     n = length(pf)
     K = zeros((n,n))
+    zero_inj_indeces = [] #Array of indeces with zero p and q injections
     for (i,pf_i) in enumerate(pf)
-        if abs(p_i) ≤ ϵ && abs(q_i) ≤ ϵ
-            K[i,i] = Nothing ######################################## Store indeces where this occurs and replace the entry with the mean.
-        else if(abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0)
+        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ
+            push!(zero_inj_indeces,i)
+        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0
             K[i,i] = 0
         else
             K[i,i] = sqrt(1-pf_i^2)/pf_i
         end
+    end
+    k_mean = mean(diag(K))
+    for i in zero_inj_indeces
+        K[i,i] = k_mean ######################################## Store indeces where this occurs and replace the entry with the mean.
     end
     return K
 end
