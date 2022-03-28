@@ -54,11 +54,11 @@ Given a network data dict, calculate the Δk value for the current operating poi
 """
 function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    pf = calc_basic_power_factor(network,sel_bus_types)[idx_sel_bus_types]
+    pf = calc_basic_power_factor(network,sel_bus_types)
     s = calc_basic_bus_injection(network)[idx_sel_bus_types]
     p,q = real.(s),imag.(s)
-    pf = [pf_i for (i,pf_i) in enumerate(pf) if abs(p[i])≥ϵ && abs(q[i]≥ϵ)]
-    try 
+    pf = [pf_i for (i,pf_i) in enumerate(pf) if abs(p[i])≥ϵ || abs(q[i]≥ϵ)]
+    Δk = try 
         abs(k(maximum(pf)) - k(minimum(pf)))
     catch
         Δk = nothing
@@ -118,6 +118,7 @@ function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
     p,q = real.(s),imag.(s)
     θ = angle.(s)
     n = length(s)
+    println(n)
     k_max = 0
     for (i,(p_i,q_i)) in enumerate(zip(p,q))
         if abs(p_i)<1e-3
