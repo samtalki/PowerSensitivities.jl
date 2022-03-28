@@ -7,6 +7,7 @@ using SparseArrays
 using Flux
 PowerModels.silence()
 
+include("power_factor.jl")
 include("jacobian_matrix.jl")
 include("sensitivities/voltage.jl")
 include("sensitivities/angles.jl")
@@ -17,7 +18,7 @@ include("data.jl")
 export JacobianMatrix, calc_jacobian_matrix
 export calc_basic_power_factor
 export calc_K_matrix, calc_M_matrix
-export calc_k_max, calc_max_pf_distance
+export calc_delta_k, calc_delta_k_max, calc_max_pf_distance
 export calc_vmag_condition
 export calc_bus_idx_of_type
 export calc_pth_jacobian, calc_qth_jacobian

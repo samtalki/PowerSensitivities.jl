@@ -1,7 +1,7 @@
 include("../PowerSensitivities.jl")
 import .PowerSensitivities
-using PowerModels
-using PowerModelsAnalytics
+#using PowerModels
+#using PowerModelsAnalytics
 using LinearAlgebra
 using JuMP
 using Ipopt
@@ -42,8 +42,9 @@ Check if symmetric part of a matrix is positive definite
 symmetric_part_pd(M) = ispd(0.5*(M +transpose(M)))
 
 #Test case path
-network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
-not_require_radial = true #whether to require test feeder is radial
+#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
+network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/"
+not_require_radial = false #whether to require test feeder is radial
 
 """
 Test assumption 1 for all feeder models in folder network_data_path
@@ -135,6 +136,7 @@ case3 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/da
 case5 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
 case24 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case24.m"))
 case14 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case14.m"))
+case18 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/radial_test/case18.m"))
 J_c3 = PowerSensitivities.calc_jacobian_matrix(case3)
 J_c5 = PowerSensitivities.calc_jacobian_matrix(case5)
 J_c24_full = calc_basic_jacobian_matrix(case24)
