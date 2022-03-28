@@ -1,15 +1,28 @@
 """
-Given a power factor return the implicit function theorem representation
+Given a real power factor pf return the implicit function theorem representation of pf
+Makes entries of the K matrix.
 """
-function k(pf)
+function k(pf::Real)
     if pf==0
         return nothing
     else
-        return sqrt(1-pf^2)/pf
+        return abs(sqrt(1-pf^2)/pf)
     end
 end
 
-function kinv(pf)
+"""
+Given a network data dict return a vector of implicit function theorem representations for all node power factors
+Makes entries of the K matrix.
+"""
+function k(network::Dict{String,<:Any},sel_bus_types=[1,2])
+    pf = calc_basic_power_factor(network,sel_bus_types)
+    return [k(pf_i) for pf_i in pf]
+end
+
+"""
+Given a real valued pf, compute inverse function of k
+"""
+function kinv(pf::Real)
     if pf==0
         return nothing
     else
@@ -17,11 +30,9 @@ function kinv(pf)
     end
 end
 
-function k(network::Dict{String,<:Any},sel_bus_types=[1,2])
-    pf = calc_basic_power_factor(network,sel_bus_types)
-    return [k(pf_i) for pf_i in pf]
-end
-
+"""
+Given a network data dict, compute inverse function of k
+"""
 function kinv(network::Dict{String,<:Any},sel_bus_types=[1,2])
     pf = calc_basic_power_factor(network,sel_bus_types)
     return [k_inv(pf_i) for pf_i in pf]
@@ -31,9 +42,7 @@ end
 Given a network data dict, return the minimum power factor to satisfy Theorem 1 as a function of the maximum power factor allowable.
 """
 function pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
-
 end
-
 
 """
 Given a network data dict, calculate the nodal power factors
@@ -42,13 +51,12 @@ function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2]
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
     s = calc_basic_bus_injection(network)[idx_sel_bus_types]
     θ = angle.(s)
-    pf = [abs(cos(θi)) for θi in θ]
     #p,q = real.(s),imag.(s)
     #pf = [p_i/(sqrt(p_i^2+q_i^2)) for (p_i,q_i) in zip(p,q)]
+    pf = [abs(cos(θi)) for θi in θ]
     return pf
 end
 
-################################### TODO: Fix [idx_sel_bus_types]
 """
 Given a network data dict, calculate the Δk value for the current operating point
 """
@@ -78,7 +86,6 @@ function calc_M_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     return M
 end
 
-
 """
 Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
 """
@@ -107,54 +114,21 @@ function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
     return K
 end
 
-
+function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
+    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
+    K = calc_K_matrix(network,sel_bus_types)
+    k_max = maximum(K)
+    return k_max .- K
+end
 
 """
 Given network data dict, calculate the maximum value of the K matrix
 """
 function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types);
-    s = calc_basic_bus_injection(network)[idx_sel_bus_types];
-    p,q = real.(s),imag.(s)
-    θ = angle.(s)
-    n = length(s)
-    println(n)
-    k_max = 0
-    for (i,(p_i,q_i)) in enumerate(zip(p,q))
-        if abs(p_i)<1e-3
-            k_ii = 0
-        elseif abs(q_i)<1e-3
-            k_ii = 0
-        else
-            #pf_i = p_i/sqrt(p_i^2+q_i^2)
-            θi = θ[i]
-            pf_i = cos(θi)
-            k_ii = abs(sqrt(1-pf_i^2)/pf_i)
-        end
-        if k_ii>k_max
-            k_max = k_ii     
-        end
-    end
-    return k_max
+    K = calc_K_matrix(network,sel_bus_types)
+    return maximum(K)
 end
 
-
-"""
-Given a maximum difference Δk_max between the Q-P sensitivities,
-Calculate the maximum power factor distance
-"""
-function calc_max_pf_distance(Δk_max)
-    model = Model(Ipopt.Optimizer);
-    @variable(model, 1 >= pf_min >= 0);
-    @variable(model, 1>= pf_max >= 0);
-    @objective(model, Max, pf_max - pf_min);
-    @constraint(model, pf_max>=pf_min);
-    @NLconstraint(model, (sqrt(1-pf_min^2)/pf_min) - (sqrt(1-pf_max^2)/pf_max) <= Δk_max  );
-    optimize!(model);
-    pf_min,pf_max = value(pf_min),value(pf_max);
-    Δpf_max = pf_max - pf_min;
-    return Δpf_max
-end
 
 """
 Given a network data dict,
@@ -183,3 +157,48 @@ function calc_vmag_condition(network::Dict{String,<:Any},sel_bus_types=[1,2])
         "M" => M,
         "pf" => pf)
 end
+
+"""
+Given a maximum difference Δk_max between the Q-P sensitivities,
+Calculate the maximum power factor distance
+"""
+function calc_max_pf_distance(Δk_max)
+    model = Model(Ipopt.Optimizer);
+    @variable(model, 1 >= pf_min >= 0);
+    @variable(model, 1>= pf_max >= 0);
+    @objective(model, Max, pf_max - pf_min);
+    @constraint(model, pf_max>=pf_min);
+    @NLconstraint(model, (sqrt(1-pf_min^2)/pf_min) - (sqrt(1-pf_max^2)/pf_max) <= Δk_max  );
+    optimize!(model);
+    pf_min,pf_max = value(pf_min),value(pf_max);
+    Δpf_max = pf_max - pf_min;
+    return Δpf_max
+end
+
+
+#Deprecated
+# function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
+#     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types);
+#     s = calc_basic_bus_injection(network)[idx_sel_bus_types];
+#     p,q = real.(s),imag.(s)
+#     θ = angle.(s)
+#     k_max = 0
+#     for (i,(p_i,q_i)) in enumerate(zip(p,q))
+#         if abs(p_i)<1e-3
+#             k_ii = 0
+#         elseif abs(q_i)<1e-3
+#             k_ii = 0
+#         else
+#             #pf_i = p_i/sqrt(p_i^2+q_i^2)
+#             pf_i = cos(θ[i])
+#             k_ii = k(pf_i)
+#         end
+#         if k_ii>k_max
+#             k_max = k_ii     
+#         end
+#     end
+#     return k_max
+# end
+
+ #p,q = real.(s),imag.(s)
+    #pf = [p_i/(sqrt(p_i^2+q_i^2)) for (p_i,q_i) in zip(p,q)]

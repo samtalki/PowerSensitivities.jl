@@ -1,10 +1,15 @@
 include("../PowerSensitivities.jl")
+using PowerModels: parse_file,make_basic_network,calc_basic_jacobian_matrix,calc_basic_bus_injection,calc_basic_bus_voltage
 import .PowerSensitivities
 using LinearAlgebra
 using JuMP
 using Ipopt
 using Gadfly
 
+#Test case path
+#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
+network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/"
+not_require_radial = true #whether to require test feeder is radial
 
 """
 Checks if a matrix M is positive definite
@@ -38,12 +43,6 @@ Check if symmetric part of a matrix is positive definite
 """
 symmetric_part_pd(M) = ispd(0.5*(M +transpose(M)))
 
-#Test case path
-#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/"
-not_require_radial = false #whether to require test feeder is radial
-
-
 """
 Test theorem 1 for all feeder models in network_data_path
 """
@@ -65,7 +64,6 @@ function test_thm1(sel_bus_types=[1,2],network_data_path=network_data_path)
     return results
 end
 
-
 #Test Theorem 1 bounds
 thm1_pq = test_thm1([1]);
 thm1_pq_pv = test_thm1([1,2]);
@@ -78,7 +76,6 @@ end
 for (name,d) in thm1_pq_pv
     delta_pf_max_pq_pv[name] = d["Δpf_max"]
 end
-
 
 # Auxillary data for testing
 case3 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case3.m"))
@@ -99,26 +96,26 @@ J_c24_blocks_pq = PowerSensitivities.calc_jacobian_matrix(case24,[1])
 
 #####Plotting functions
 
-p1 = spy(J_c5.pth,Guide.xlabel("Bus Index k"),Guide.ylabel("Bus Index i"),Guide.title("∂pᵢ/∂θₖ"))
-p2 = spy(J_c5.qth,Guide.xlabel("Bus Index k"),Guide.ylabel("Bus Index i"),Guide.title("∂qᵢ/∂θₖ"))
-title(hstack(p1,p2),"IEEE Case 5 Voltage Phase Angle Jacobians")
+# p1 = spy(J_c5.pth,Guide.xlabel("Bus Index k"),Guide.ylabel("Bus Index i"),Guide.title("∂pᵢ/∂θₖ"))
+# p2 = spy(J_c5.qth,Guide.xlabel("Bus Index k"),Guide.ylabel("Bus Index i"),Guide.title("∂qᵢ/∂θₖ"))
+# title(hstack(p1,p2),"IEEE Case 5 Voltage Phase Angle Jacobians")
 
-dpi=100
-plot_network(case3; 
-    filename="case3.pdf",
-    label_nodes=true,
-    label_edge=true,
-    node_size_limits=[15,20],
-    edge_width_limits=[3, 4],
-    fontsize=12,
-    plot_size=(floor(Int64,3.5*dpi),floor(Int64,3.5/1.61828*dpi)),
-    plot_dpi=dpi);
+# dpi=100
+# plot_network(case3; 
+#     filename="case3.pdf",
+#     label_nodes=true,
+#     label_edge=true,
+#     node_size_limits=[15,20],
+#     edge_width_limits=[3, 4],
+#     fontsize=12,
+#     plot_size=(floor(Int64,3.5*dpi),floor(Int64,3.5/1.61828*dpi)),
+#     plot_dpi=dpi);
 
-graph = plot_network(case5;
-    node_size_limits=[10, 15],
-    edge_width_limits=[2, 3],
-    label_nodes=true,
-    fontsize=10,
-    plot_size=(600,600),
-    plot_dpi=100,
-    filename="case5.pdf");
+# graph = plot_network(case5;
+#     node_size_limits=[10, 15],
+#     edge_width_limits=[2, 3],
+#     label_nodes=true,
+#     fontsize=10,
+#     plot_size=(600,600),
+#     plot_dpi=100,
+#     filename="case5.pdf");
