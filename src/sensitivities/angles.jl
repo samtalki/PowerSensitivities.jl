@@ -45,7 +45,7 @@ function calc_pth_jacobian(∂q∂v::AbstractMatrix,vm::AbstractVector,q::Abstra
         for (k,v_k) in enumerate(vm)
             q_k = q[k]
             if i==k
-                ∂p∂θ[i,i] = v_k*(∂q∂v[i,i] - 2*q_k)
+                ∂p∂θ[i,i] = v_k*∂q∂v[i,i] - 2*q_k
             else
                 ∂p∂θ[i,k] = v_k*∂q∂v[i,k]
             end
@@ -101,7 +101,7 @@ function calc_qth_jacobian(∂p∂v::AbstractMatrix,vm::AbstractVector,p::Abstra
         for (k,v_k) in enumerate(vm)
             p_k = p[k]
             if i==k
-                ∂q∂θ[i,k] = -v_k*(∂p∂v[i,k] + 2*p_k)
+                ∂q∂θ[i,k] = -v_k*∂p∂v[i,k] + 2*p_k
             else
                 ∂q∂θ[i,k] = -v_k*∂p∂v[i,k]
             end
