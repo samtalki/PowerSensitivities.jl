@@ -15,7 +15,27 @@ function set_network_load(network::Dict{String,<:Any}, new_load; scale_load=true
 	end
 end
 
-
+"""
+Given a network data dict, calculate the "bad indeces" that have 0 injection
+"""
+function calc_bad_idx(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
+    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
+    s = calc_basic_bus_injection(network)[idx_sel_bus_types];
+    p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network,sel_bus_types) 
+    bad_idx = [] #Array of indeces with zero p or zero MVA injections to be discarded
+    for (i,pf_i) in enumerate(pf)
+        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ #If there is no apparent power injection, it doesn't make sense
+            push!(bad_idx,i)
+        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0 #If there is no real power injection, it doesn't make sense
+            push!(bad_idx,i) #K[i,i] = 0
+        #elseif q[i] < 0 #Capacitor banks
+        #    push!(bad_idx,i)
+        else
+            continue
+        end
+    end
+    return bad_idx
+end
 
 """
 Given a network data dict, check if the network is radial
