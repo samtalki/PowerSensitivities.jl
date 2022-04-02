@@ -7,7 +7,7 @@ function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2]
     θ = angle.(s)
     #p,q = real.(s),imag.(s)
     #pf = [p_i/(sqrt(p_i^2+q_i^2)) for (p_i,q_i) in zip(p,q)]
-    pf = [abs(cos(θi)) for θi in θ]
+    pf = [cos(θi) for θi in θ]
     return pf
 end
 
@@ -66,7 +66,7 @@ end
 """
 Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
 """
-function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
+function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
     s = calc_basic_bus_injection(network)[idx_sel_bus_types];
     p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network,sel_bus_types) 
@@ -79,7 +79,7 @@ function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
         elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0 #If there is no real power injection, it doesn't make sense
             push!(bad_idx,i) #K[i,i] = 0
         else
-            K[i,i] = k(pf_i,q[i])#sqrt(1-pf_i^2)/pf_i
+            K[i,i] = k(pf_i)#k(pf_i,q[i])#sqrt(1-pf_i^2)/pf_i
         end
     end
     k_mean = mean(diag(K)[[i for i in 1:n if i ∉ bad_idx]]) #Replace the bad indeces with the mean of the other k entries
@@ -89,7 +89,7 @@ function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
     return K
 end
 
-function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
+function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
     K = calc_K_matrix(network,sel_bus_types)
     k_max = maximum(K)
     return k_max .- K
@@ -106,7 +106,7 @@ calc_k_min(network::Dict{String,<:Any},sel_bus_types=[1,2]) = minimum(calc_K_mat
 """
 Given a network data dict, calculate the Δk=k_max-k_min value for the current operating point
 """
-function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
+function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
     pf = calc_basic_power_factor(network,sel_bus_types)
     s = calc_basic_bus_injection(network)[idx_sel_bus_types]
@@ -139,18 +139,23 @@ Given a network data dict, return the minimum power factor to satisfy Theorem 1 
 function pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
 end
 
+
 """
 Given a network data dict,
 Compute the maximum difference between nodal power factors so that complex power injections can be modeled from voltage magnitudes
 """
 function calc_vmag_condition(network::Dict{String,<:Any},sel_bus_types=[1,2])
     ∂p∂θ = calc_pth_jacobian(network,sel_bus_types)
-    M = calc_M_matrix(network,sel_bus_types)
+    M = try
+        calc_M_matrix(network,sel_bus_types)
+    catch
+        throw(ArgumentError("No valid bus"))
+    end
     pf = calc_basic_power_factor(network,sel_bus_types)
     k_max = calc_k_max(network,sel_bus_types)
     M_nonsingular = true
     Δk_max = try
-        (1/(opnorm(inv(M))))*(1/(opnorm(∂p∂θ)))
+        (1/(opnorm(inv(Matrix(M)),2)))*(1/(opnorm(Matrix(∂p∂θ),2)));
     catch
         Δk_max = nothing
         M_nonsingular = false
