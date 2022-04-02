@@ -9,7 +9,7 @@ using Gadfly
 #Test case path
 #network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
 network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/"
-not_require_radial = true #whether to require test feeder is radial
+not_require_radial = false #whether to require test feeder is radial
 
 """
 Checks if a matrix M is positive definite
@@ -43,6 +43,103 @@ Check if symmetric part of a matrix is positive definite
 """
 symmetric_part_pd(M) = ispd(0.5*(M +transpose(M)))
 
+
+"""
+Given a network data dict,
+Calculate RHS of inequality "Δk_max" with optionally drop_bad_idx
+"""
+function calc_rhs(network::Dict{String,<:Any},sel_bus_types=[1,2],drop_bad_idx=true)
+    idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    n = length(idx_sel_bus_types)
+    if drop_bad_idx
+        bad_idx = PowerSensitivities.calc_bad_idx(network,sel_bus_types)
+        not_bad_idx = [i for i in 1:n if i ∉ bad_idx]
+    else
+        not_bad_idx = [i for i in 1:n]
+    end
+    ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network,sel_bus_types)[not_bad_idx,not_bad_idx]
+    M = PowerSensitivities.calc_M_matrix(network,sel_bus_types)[not_bad_idx,not_bad_idx]
+    Δk_max = try
+        (1/(opnorm(inv(Matrix(M)),2)))*(1/(opnorm(Matrix(∂p∂θ),2)))
+    catch
+        Δk_max = nothing
+    end
+    return Δk_max
+end
+
+"""
+Given a network data dict,
+Calculate LHS of inequality "Δk" with optionally drop_bad_idx
+"""
+function calc_lhs(network::Dict{String,<:Any},sel_bus_types=[1,2],drop_bad_idx=true)
+    idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    n = length(idx_sel_bus_types)
+    if drop_bad_idx
+        bad_idx = PowerSensitivities.calc_bad_idx(network,sel_bus_types)
+        not_bad_idx = [i for i in 1:n if i ∉ bad_idx]
+    else
+        not_bad_idx = [i for i in 1:n]
+    end
+    k(pf::Real) = sqrt(1-pf^2)/pf
+    pf = PowerSensitivities.calc_basic_power_factor(network,sel_bus_types)[not_bad_idx]
+    Δk = try 
+        abs(k(maximum(pf)) - k(minimum(pf)))
+    catch
+        Δk = nothing
+    end
+    return Δk
+end
+
+"""
+Test LHS for all feeder models in network_data_path
+"""
+function test_rhs(sel_bus_types=[1,2],network_data_path=network_data_path)
+    names = readdir(network_data_path);
+    paths = readdir(network_data_path,join=true);
+    results = Dict()
+    for (name,path) in zip(names,paths)
+        network =  try
+            make_basic_network(parse_file(path));
+        catch
+            println("PM cannot parse "*name)
+            continue
+        end
+        if PowerSensitivities.is_radial(network) || not_require_radial
+            results[name] = try
+                calc_rhs(network,sel_bus_types)
+            catch
+                continue
+            end
+        end
+    end
+    return results
+end
+"""
+Test LHS for all feeder models in network_data_path
+"""
+function test_lhs(sel_bus_types=[1,2],network_data_path=network_data_path)
+    names = readdir(network_data_path);
+    paths = readdir(network_data_path,join=true);
+    results = Dict()
+    for (name,path) in zip(names,paths)
+        network =  try
+            make_basic_network(parse_file(path));
+        catch
+            println("PM cannot parse "*name)
+            continue
+        end
+        if PowerSensitivities.is_radial(network) || not_require_radial
+            results[name] = try
+                calc_lhs(network,sel_bus_types)
+            catch
+                continue
+            end
+        end
+    end
+    return results
+end
+
+
 """
 Test theorem 1 for all feeder models in network_data_path
 """
@@ -58,15 +155,27 @@ function test_thm1(sel_bus_types=[1,2],network_data_path=network_data_path)
             continue
         end
         if PowerSensitivities.is_radial(network) || not_require_radial
-            results[name] = PowerSensitivities.calc_vmag_condition(network,sel_bus_types)
+            results[name] = try
+                PowerSensitivities.calc_vmag_condition(network,sel_bus_types)
+            catch
+                continue
+            end
         end
     end
     return results
 end
 
+
+
 #Test Theorem 1 bounds
 thm1_pq = test_thm1([1]);
 thm1_pq_pv = test_thm1([1,2]);
+
+#Thm1 inequality LHS/RHS
+lhs_pq = test_lhs([1]);
+rhs_pq = test_rhs([1]);
+lhs_pq_pv = test_lhs([1,2]);
+rhs_pq_pv = test_rhs([1,2]);
 
 #Test for the maximum power factor distances
 delta_pf_max_pq,delta_pf_max_pq_pv = Dict(),Dict()
