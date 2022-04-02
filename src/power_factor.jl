@@ -1,12 +1,36 @@
 """
+Given a network data dict, calculate the nodal power factors
+"""
+function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2])
+    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
+    s = calc_basic_bus_injection(network)[idx_sel_bus_types]
+    θ = angle.(s)
+    #p,q = real.(s),imag.(s)
+    #pf = [p_i/(sqrt(p_i^2+q_i^2)) for (p_i,q_i) in zip(p,q)]
+    pf = [abs(cos(θi)) for θi in θ]
+    return pf
+end
+
+"""
 Given a real power factor pf return the implicit function theorem representation of pf
-Makes entries of the K matrix.
 """
 function k(pf::Real)
     if pf==0
         return nothing
     else
         return abs(sqrt(1-pf^2)/pf)
+    end
+end
+
+"""
+Given a real power factor pf and the reactive power injection return the SIGNED implicit function theorem representation of pf
+This is used to make entries of the K matrix.
+"""
+function k(pf::Real,q::Real)
+    if pf==0
+        return nothing
+    else
+        return sign(q)*abs(sqrt(1-pf^2)/pf)
     end
 end
 
@@ -38,27 +62,49 @@ function kinv(network::Dict{String,<:Any},sel_bus_types=[1,2])
     return [k_inv(pf_i) for pf_i in pf]
 end
 
-"""
-Given a network data dict, return the minimum power factor to satisfy Theorem 1 as a function of the maximum power factor allowable.
-"""
-function pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
-end
 
 """
-Given a network data dict, calculate the nodal power factors
+Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
 """
-function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2])
+function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    s = calc_basic_bus_injection(network)[idx_sel_bus_types]
-    θ = angle.(s)
-    #p,q = real.(s),imag.(s)
-    #pf = [p_i/(sqrt(p_i^2+q_i^2)) for (p_i,q_i) in zip(p,q)]
-    pf = [abs(cos(θi)) for θi in θ]
-    return pf
+    s = calc_basic_bus_injection(network)[idx_sel_bus_types];
+    p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network,sel_bus_types) 
+    n = length(pf)
+    K = zeros((n,n))
+    bad_idx = [] #Array of indeces with zero p or zero MVA injections to be discarded
+    for (i,pf_i) in enumerate(pf)
+        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ #If there is no apparent power injection, it doesn't make sense
+            push!(bad_idx,i)
+        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0 #If there is no real power injection, it doesn't make sense
+            push!(bad_idx,i) #K[i,i] = 0
+        else
+            K[i,i] = k(pf_i,q[i])#sqrt(1-pf_i^2)/pf_i
+        end
+    end
+    k_mean = mean(diag(K)[[i for i in 1:n if i ∉ bad_idx]]) #Replace the bad indeces with the mean of the other k entries
+    for i in bad_idx
+        K[i,i] = k_mean ## Replace k entry at bad idx with the mean of other ks.
+    end
+    return K
+end
+
+function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
+    K = calc_K_matrix(network,sel_bus_types)
+    k_max = maximum(K)
+    return k_max .- K
 end
 
 """
-Given a network data dict, calculate the Δk value for the current operating point
+Given network data dict, calculate the maximum value of the K matrix
+"""
+calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2]) = maximum(calc_K_matrix(network,sel_bus_types))
+calc_k_min(network::Dict{String,<:Any},sel_bus_types=[1,2]) = minimum(calc_K_matrix(network,sel_bus_types))
+
+
+
+"""
+Given a network data dict, calculate the Δk=k_max-k_min value for the current operating point
 """
 function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
@@ -80,55 +126,18 @@ Calculate the M Matrix for theorem 1
 function calc_M_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     ∂p∂θ = calc_pth_jacobian(network,sel_bus_types)
     ∂q∂θ = calc_qth_jacobian(network,sel_bus_types)
-    k_max = maximum(k(network,sel_bus_types))
-    #k_max = calc_k_max(network,sel_bus_types)
+    #k_max = maximum(k(network,sel_bus_types))
+    k_max = calc_k_max(network,sel_bus_types)
     M = k_max*∂p∂θ - ∂q∂θ
     return M
 end
 
-"""
-Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
-"""
-function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    s = calc_basic_bus_injection(network)[idx_sel_bus_types];
-    p,q = real.(s),imag.(s)
-    #pf = [cos(atan(q_i/p_i)) for (p_i,q_i) in zip(p,q)]
-    pf = calc_basic_power_factor(network,sel_bus_types)
-    n = length(pf)
-    K = zeros((n,n))
-    zero_inj_indeces = [] #Array of indeces with zero p and q injections
-    for (i,pf_i) in enumerate(pf)
-        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ
-            push!(zero_inj_indeces,i)
-        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0
-            K[i,i] = 0
-        else
-            K[i,i] = sqrt(1-pf_i^2)/pf_i
-        end
-    end
-    k_mean = mean(diag(K))
-    for i in zero_inj_indeces
-        K[i,i] = k_mean ######################################## Store indeces where this occurs and replace the entry with the mean.
-    end
-    return K
-end
-
-function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-3)
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    K = calc_K_matrix(network,sel_bus_types)
-    k_max = maximum(K)
-    return k_max .- K
-end
 
 """
-Given network data dict, calculate the maximum value of the K matrix
+Given a network data dict, return the minimum power factor to satisfy Theorem 1 as a function of the maximum power factor allowable.
 """
-function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
-    K = calc_K_matrix(network,sel_bus_types)
-    return maximum(K)
+function pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
 end
-
 
 """
 Given a network data dict,

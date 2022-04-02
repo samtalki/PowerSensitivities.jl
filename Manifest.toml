@@ -1537,9 +1537,9 @@ version = "0.23.0"
 
 [[deps.TimeZones]]
 deps = ["Dates", "Downloads", "InlineStrings", "LazyArtifacts", "Mocking", "Printf", "RecipesBase", "Serialization", "Unicode"]
-git-tree-sha1 = "2d4b6de8676b34525ac518de36006dc2e89c7e2e"
+git-tree-sha1 = "0a359b0ee27e4fbc90d9b3da1f48ddc6f98a0c9e"
 uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
-version = "1.7.2"
+version = "1.7.3"
 
 [[deps.TimerOutputs]]
 deps = ["ExprTools", "Printf"]
