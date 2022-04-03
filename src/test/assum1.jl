@@ -49,6 +49,6 @@ end
 
 
 #Test assumption 1
-results_all,J_all,network_dicts = test_assumption1([1,2,3]);
-results_pq_pv,J_pq_pv,network_dicts = test_assumption1([1,2]);
-results_pq,J_pq,network_dicts = test_assumption1([1]);
+assum1_all,J_all,network_dicts = test_assumption1([1,2,3]);
+assum1_pq_pv,J_pq_pv,network_dicts = test_assumption1([1,2]);
+assum1_pq,J_pq,network_dicts = test_assumption1([1]);

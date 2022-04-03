@@ -82,12 +82,20 @@ function calc_lhs(network::Dict{String,<:Any},sel_bus_types=[1,2],drop_bad_idx=t
     end
     k(pf::Real) = sqrt(1-pf^2)/pf
     pf = PowerSensitivities.calc_basic_power_factor(network,sel_bus_types)[good_idx]
+    Δpf = try
+        abs(maximum(pf) - minimum(pf))
+    catch
+        Δpf = nothing
+    end
     Δk = try 
-        abs(k(maximum(pf)) - k(minimum(pf)))
+        abs(k(minimum(pf)) - k(maximum(pf)))
     catch
         Δk = nothing
     end
-    return Δk
+    return Dict(
+        "Δk" => Δk,
+        "Δpf" => Δpf
+    )
 end
 
 """
@@ -114,6 +122,7 @@ function test_rhs(sel_bus_types=[1,2],network_data_path=network_data_path)
     end
     return results
 end
+
 """
 Test LHS for all feeder models in network_data_path
 """
@@ -138,7 +147,6 @@ function test_lhs(sel_bus_types=[1,2],network_data_path=network_data_path)
     end
     return results
 end
-
 
 """
 Test theorem 1 for all feeder models in network_data_path
@@ -169,7 +177,7 @@ function thm1_satisfied(lhs,rhs)
     res = Dict()
     for (n, lhs_n) in lhs
         rhs_n = rhs[n]
-        res[n] = lhs_n<rhs_n
+        res[n] = lhs_n["Δk"]<rhs_n
     end
     return res
 end

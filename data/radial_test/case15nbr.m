@@ -69,9 +69,9 @@ mpc.gencost = [
 ];
 
 
-%% convert branch impedances from Ohms to p.u.
-[PQ, PV, REF, NONE, BUS_I, BUS_TYPE, PD, QD, GS, BS, BUS_AREA, VM, ...
-    VA, BASE_KV, ZONE, VMAX, VMIN, LAM_P, LAM_Q, MU_VMAX, MU_VMIN] = idx_bus;
+% %% convert branch impedances from Ohms to p.u.
+% [PQ, PV, REF, NONE, BUS_I, BUS_TYPE, PD, QD, GS, BS, BUS_AREA, VM, ...
+%     VA, BASE_KV, ZONE, VMAX, VMIN, LAM_P, LAM_Q, MU_VMAX, MU_VMIN] = idx_bus;
 
-%% convert loads from kW to MW
-mpc.bus(:, [PD, QD]) = mpc.bus(:, [PD, QD]) / 1e3;
+% %% convert loads from kW to MW
+% mpc.bus(:, [PD, QD]) = mpc.bus(:, [PD, QD]) / 1e3;
