@@ -88,7 +88,7 @@ function calc_lhs(network::Dict{String,<:Any},sel_bus_types=[1,2],drop_bad_idx=t
         Δpf = nothing
     end
     Δk = try 
-        abs(k(minimum(pf)) - k(maximum(pf)))
+        abs(k(minimum(abs.(pf))) - k(maximum(abs.(pf))))
     catch
         Δk = nothing
     end

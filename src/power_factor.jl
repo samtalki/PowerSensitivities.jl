@@ -18,7 +18,7 @@ function k(pf::Real)
     if pf==0
         return nothing
     else
-        return abs(sqrt(1-pf^2)/pf)
+        return sqrt(1-pf^2)/pf
     end
 end
 
