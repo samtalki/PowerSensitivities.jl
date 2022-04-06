@@ -11,6 +11,9 @@ function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2]
     return pf
 end
 
+#Calculate power factor without bus truncation
+calc_basic_power_factor(network::Dict{String,<:Any}) =  [cos(θi) for θi in angle.(calc_basic_bus_injection(network))]
+
 """
 Given a real power factor pf return the implicit function theorem representation of pf
 """
@@ -44,13 +47,13 @@ function k(network::Dict{String,<:Any},sel_bus_types=[1,2])
 end
 
 """
-Given a real valued pf, compute inverse function of k
+Given a real valued β, compute inverse function of k
 """
-function kinv(pf::Real)
-    if pf==0
+function kinv(β::Real)
+    if β≤0
         return nothing
     else
-        return sqrt(1/(k(pf)^2 + 1))
+        return sqrt(1/(k(β)^2 + 1))
     end
 end
 
@@ -62,29 +65,6 @@ function kinv(network::Dict{String,<:Any},sel_bus_types=[1,2])
     return [k_inv(pf_i) for pf_i in pf]
 end
 
-"""
-Given:
-    a network data dict under study,
-    a chosen maximum power factor pf_max,
-    and the selected bus types under study
-Compute:
-    the minimum power factor pf_min such that the complex power injections are observable
-"""
-function calc_pf_min(network::Dict{String,<:Any},pf_max::Real=1,sel_bus_types=[1,2])
-    M = calc_M_matrix(network,sel_bus_types)
-    ∂p∂θ = calc_pth_jacobian(network,sel_bus_types)
-    if pf_max==1
-        pf_min = kinv(
-            opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
-        )
-    else
-        pf_min = kinv(
-            k(pf_max) + opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
-        )
-    end
-    return pf_min
-    
-end
 
 
 """
@@ -158,13 +138,6 @@ end
 
 
 """
-Given a network data dict, return the minimum power factor to satisfy Theorem 1 as a function of the maximum power factor allowable.
-"""
-function pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
-end
-
-
-"""
 Given a network data dict,
 Compute the maximum difference between nodal power factors so that complex power injections can be modeled from voltage magnitudes
 """
@@ -195,6 +168,9 @@ function calc_vmag_condition(network::Dict{String,<:Any},sel_bus_types=[1,2])
         "M" => M,
         "pf" => pf)
 end
+
+
+
 
 """
 Given a maximum difference Δk_max between the Q-P sensitivities,
