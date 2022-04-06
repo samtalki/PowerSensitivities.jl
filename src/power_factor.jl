@@ -63,12 +63,26 @@ function kinv(network::Dict{String,<:Any},sel_bus_types=[1,2])
 end
 
 """
-Given a network data dict and a chosen maximum power factor pf_max, compute the minimum power factor pf_min
-such that the complex power injections are observable
+Given:
+    a network data dict under study,
+    a chosen maximum power factor pf_max,
+    and the selected bus types under study
+Compute:
+    the minimum power factor pf_min such that the complex power injections are observable
 """
-function pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    s = calc_basic_bus_injection(network,sel_bus_types)
+function calc_pf_min(network::Dict{String,<:Any},pf_max::Real=1,sel_bus_types=[1,2])
+    M = calc_M_matrix(network,sel_bus_types)
+    ∂p∂θ = calc_pth_jacobian(network,sel_bus_types)
+    if pf_max==1
+        pf_min = kinv(
+            opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
+        )
+    else
+        pf_min = kinv(
+            k(pf_max) + opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
+        )
+    end
+    return pf_min
     
 end
 
