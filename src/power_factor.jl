@@ -82,6 +82,8 @@ function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
             push!(bad_idx,i)
         elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0 #If there is no real power injection, it doesn't make sense
             push!(bad_idx,i) #K[i,i] = 0
+        elseif q[i] > 0 #Ignore capacitive injections
+            push!(bad_idx,i)
         else
             K[i,i] = k(pf_i)#k(pf_i,q[i])#sqrt(1-pf_i^2)/pf_i
         end

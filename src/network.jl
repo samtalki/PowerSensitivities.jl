@@ -21,7 +21,6 @@ Given a network data dict, calculate the "bad indeces" that do not satisfy the a
 function calc_bad_idx(network::Dict{String,<:Any},ϵ=1e-6)
     s = calc_basic_bus_injection(network);
     p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network) 
-    @assert length(s) == n_selected && length(pf) == n_selected #Check the lengths are consistent
     bad_idx = [] #Array of indeces with zero p or zero MVA injections to be discarded
     for (i,pf_i) in enumerate(pf)
         #Ignore buses with zero power injection
