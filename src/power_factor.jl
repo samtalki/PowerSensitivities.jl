@@ -151,6 +151,7 @@ function calc_vmag_condition(network::Dict{String,<:Any},sel_bus_types=[1,2])
         throw(ArgumentError("No valid bus"))
     end
     pf = calc_basic_power_factor(network,sel_bus_types)
+    K = calc_K_matrix(network,sel_bus_types)
     k_max = calc_k_max(network,sel_bus_types)
     M_nonsingular = true
     Δk_max = try
@@ -160,14 +161,13 @@ function calc_vmag_condition(network::Dict{String,<:Any},sel_bus_types=[1,2])
         M_nonsingular = false
     end
     Δk = calc_delta_k(network,sel_bus_types)
-    Δpf_max = calc_max_pf_distance(Δk_max)
     return Dict(
         "Δk" => Δk,
         "M_nonsingular" => M_nonsingular,
         "Δk_max" => Δk_max,
-        "Δpf_max" => Δpf_max,
         "k_max" => k_max,
         "M" => M,
+        "K" => K,
         "pf" => pf)
 end
 

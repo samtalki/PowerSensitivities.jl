@@ -67,10 +67,10 @@ end
 """
 Given a file of test cases, calculate a test of the compelx power injection estimation. 
 Does these things:
-1. Generates the true S† matrices,
-2. Calculates an AMI dataset
-3. Computes the estimated S† matrix
-4. Calculates the estimated Δx at each timestep from the AMI dataset.
+    1. Generates the true S† matrices,
+    2. Calculates an AMI dataset
+    3. Computes the estimated S† matrix
+    4. Calculates the estimated Δx at each timestep from the AMI dataset.
 """
 function test_complex_injection_est(diff_datasets,sel_bus_types=[1,2],network_data_path=network_data_path)
     names = readdir(network_data_path);
