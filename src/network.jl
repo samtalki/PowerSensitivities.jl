@@ -16,26 +16,59 @@ function set_network_load(network::Dict{String,<:Any}, new_load; scale_load=true
 end
 
 """
-Given a network data dict, calculate the "bad indeces" that have 0 injection
+Given a network data dict, calculate the "bad indeces" that do not satisfy the assumptions of Theorem 1
 """
-function calc_bad_idx(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    s = calc_basic_bus_injection(network)[idx_sel_bus_types];
-    p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network,sel_bus_types) 
+function calc_bad_idx(network::Dict{String,<:Any},ϵ=1e-6)
+    s = calc_basic_bus_injection(network);
+    p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network) 
+    @assert length(s) == n_selected && length(pf) == n_selected #Check the lengths are consistent
     bad_idx = [] #Array of indeces with zero p or zero MVA injections to be discarded
     for (i,pf_i) in enumerate(pf)
-        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ #If there is no apparent power injection, it doesn't make sense
+        #Ignore buses with zero power injection
+        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ 
             push!(bad_idx,i)
-        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0 #If there is no real power injection, it doesn't make sense
+        #Ignore buses with zero power factor
+        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0
             push!(bad_idx,i) #K[i,i] = 0
-        #elseif q[i] < 0 #Capacitor banks
-        #    push!(bad_idx,i)
+        #Ignore buses with capacitive injections
+        elseif q[i] > 0 
+           push!(bad_idx,i)
         else
             continue
         end
     end
     return bad_idx
 end
+
+"""
+Given a network data dict and !SELECTED BUS TYPES!, calculate the "bad indeces" that do not satisfy the assumptions of Theorem 1
+"""
+function calc_bad_idx(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
+    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
+    n_selected = length(idx_sel_bus_types) #Number of selected buses
+    s = calc_basic_bus_injection(network)[idx_sel_bus_types];
+    p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network,sel_bus_types) 
+    @assert length(s) == n_selected && length(pf) == n_selected #Check the lengths are consistent
+    bad_idx = [] #Array of indeces with zero p or zero MVA injections to be discarded
+    for i in 1:n_selected
+        pf_i,p_i,q_i = pf[i],p[i],q[i]
+        #Ignore buses with zero power injection
+        if abs(p_i) ≤ ϵ && abs(q_i) ≤ ϵ 
+            push!(bad_idx,i)
+        #Ignore buses with zero power factor
+        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p_i == 0.0
+            push!(bad_idx,i) #K[i,i] = 0
+        #Ignore buses with capacitive injections
+        elseif q_i > 0 
+           push!(bad_idx,i)
+        else
+            continue
+        end
+    end
+    return bad_idx
+end
+
+
 
 """
 Given a network data dict, check if the network is radial
