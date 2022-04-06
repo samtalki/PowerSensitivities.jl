@@ -62,6 +62,16 @@ function kinv(network::Dict{String,<:Any},sel_bus_types=[1,2])
     return [k_inv(pf_i) for pf_i in pf]
 end
 
+"""
+Given a network data dict and a chosen maximum power factor pf_max, compute the minimum power factor pf_min
+such that the complex power injections are observable
+"""
+function pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
+    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
+    s = calc_basic_bus_injection(network,sel_bus_types)
+    
+end
+
 
 """
 Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
