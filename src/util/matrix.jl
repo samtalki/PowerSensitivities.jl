@@ -29,4 +29,3 @@ symmetric_part_nsd(M) = isnsd(M + transpose(M./2))
 Check if symmetric part of a matrix is positive definite
 """
 symmetric_part_pd(M) = ispd(0.5*(M +transpose(M)))
-

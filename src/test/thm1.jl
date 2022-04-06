@@ -1,4 +1,5 @@
 include("../PowerSensitivities.jl")
+include("../util/matrix.jl")
 using PowerModels: parse_file,make_basic_network,calc_basic_jacobian_matrix,calc_basic_bus_injection,calc_basic_bus_voltage
 import .PowerSensitivities
 using LinearAlgebra
@@ -7,46 +8,14 @@ using Ipopt
 using Gadfly
 
 #Test case path
-#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/"
-not_require_radial = false #whether to require test feeder is radial
-
-"""
-Checks if a matrix M is positive definite
-"""
-ispd(M) = all([real(eig)>0 for eig in eigvals(M)])
-
-"""
-Checks if a matrix M is negative definite
-"""
-isnd(M) = all([real(eig)<0 for eig in eigvals(M)])
-isnsd(M,ϵ=1e-12) = all([real(eig)<=ϵ for eig in eigvals(M)])
-
-"""
-Checks if a matrix M is invertible
-"""
-isinvertible(x) = applicable(inv, x)
-
-"""
-Returns distance between M and M transpose
-"""
-symmetricdiff(M) = norm(M-transpose(M))
-
-"""
-Check if symmetric part of a matrix is negative definite
-"""
-symmetric_part_nd(M) = isnd(0.5.*(M + transpose(M)))
-symmetric_part_nsd(M) = isnsd(M + transpose(M./2))
-
-"""
-Check if symmetric part of a matrix is positive definite
-"""
-symmetric_part_pd(M) = ispd(0.5*(M +transpose(M)))
-
+#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
+network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
+allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
 
 """
 Given a network data dict,
-Calculate RHS of inequality "Δk_max" with optionally drop_bad_idx
+Calculate RHS of inequality "Δk_max" with the option drop_bad_idx.
+If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx are discarded.
 """
 function calc_rhs(network::Dict{String,<:Any},sel_bus_types=[1,2],drop_bad_idx=true)
     idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
@@ -69,7 +38,8 @@ end
 
 """
 Given a network data dict,
-Calculate LHS of inequality "Δk" with optionally drop_bad_idx
+Calculate LHS of inequality "Δk" with the option drop_bad_idx.
+If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx are discarded.
 """
 function calc_lhs(network::Dict{String,<:Any},sel_bus_types=[1,2],drop_bad_idx=true)
     idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
@@ -112,7 +82,7 @@ function test_rhs(sel_bus_types=[1,2],network_data_path=network_data_path)
             println("PM cannot parse "*name)
             continue
         end
-        if PowerSensitivities.is_radial(network) || not_require_radial
+        if PowerSensitivities.is_radial(network) || allow_mesh
             results[name] = try
                 calc_rhs(network,sel_bus_types)
             catch
@@ -137,7 +107,7 @@ function test_lhs(sel_bus_types=[1,2],network_data_path=network_data_path)
             println("PM cannot parse "*name)
             continue
         end
-        if PowerSensitivities.is_radial(network) || not_require_radial
+        if PowerSensitivities.is_radial(network) || allow_mesh
             results[name] = try
                 calc_lhs(network,sel_bus_types)
             catch
@@ -162,7 +132,7 @@ function test_thm1(sel_bus_types=[1,2],network_data_path=network_data_path)
             println("PM cannot parse "*name)
             continue
         end
-        if PowerSensitivities.is_radial(network) || not_require_radial
+        if PowerSensitivities.is_radial(network) || allow_mesh
             results[name] = try
                 PowerSensitivities.calc_vmag_condition(network,sel_bus_types)
             catch

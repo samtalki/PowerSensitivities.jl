@@ -12,6 +12,7 @@ include("power_factor.jl")
 include("jacobian_matrix.jl")
 include("sensitivities/voltage.jl")
 include("sensitivities/angles.jl")
+include("util/matrix.jl")
 include("matrix_completion.jl")
 include("network.jl")
 include("data.jl")
@@ -27,5 +28,7 @@ export calc_pv_jacobian, calc_qv_jacobian
 export make_ami_dataset,make_timeseries_dataset,calc_finite_differences
 export set_network_load,is_radial
 export calc_jacobian_timeseries
+
+export ispd,isnd,isnsd,isinvertible,symmetricdiff,symmetric_part_nd,symmetric_part_nsd,symmetric_part_pd
 
 end

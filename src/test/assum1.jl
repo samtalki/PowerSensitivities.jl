@@ -1,7 +1,9 @@
+include("../util/matrix.jl")
+using PowerModels: parse_file,make_basic_network,calc_basic_jacobian_matrix
 #Test case path
 #network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/"
 network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/"
-not_require_radial = false #whether to require test feeder is radial
+allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
 
 """
 Test assumption 1 for all feeder models in folder network_data_path
@@ -17,7 +19,7 @@ function test_assumption1(sel_bus_types=[1,2],network_data_path=network_data_pat
             println("PM cannot parse "*name)
             continue
         end
-        if PowerSensitivities.is_radial(data) || not_require_radial
+        if PowerSensitivities.is_radial(data) || allow_mesh
             J = try
                 PowerSensitivities.calc_jacobian_matrix(data,sel_bus_types);
             catch
