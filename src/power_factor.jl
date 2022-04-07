@@ -5,9 +5,7 @@ function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2]
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
     s = calc_basic_bus_injection(network)[idx_sel_bus_types]
     θ = angle.(s)
-    #p,q = real.(s),imag.(s)
-    #pf = [p_i/(sqrt(p_i^2+q_i^2)) for (p_i,q_i) in zip(p,q)]
-    pf = [cos(θi) for θi in θ]
+    pf = [abs(cos(θi)) for θi in θ]
     return pf
 end
 
@@ -33,7 +31,7 @@ function k(pf::Real,q::Real)
     if pf==0
         return nothing
     else
-        return sign(q)*abs(sqrt(1-pf^2)/pf)
+        return -sign(q)*abs(sqrt(1-pf^2)/pf)
     end
 end
 
