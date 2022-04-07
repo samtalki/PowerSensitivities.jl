@@ -12,7 +12,12 @@ def calc_rel_err(M_hat,M):
     """L2 norm relative error"""
     return (np.linalg.norm(M_hat-M,))/(np.linalg.norm(M,))
 
+def K(pf):
+    """Compute the K matrix given bus power factors"""
+    k = lambda pf_ : np.sqrt(1-pf_**2)/pf_
+    return np.diag([k(pf_i) for pf_i in pf])
 
+    
 def mat_rec_problem(S,S_0,dx,dv,lamb,o,delta):
     """
     Make the matrix recovery problem

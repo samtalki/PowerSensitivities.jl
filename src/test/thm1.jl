@@ -299,12 +299,9 @@ pf_min_unity_pq_pv = test_pf_min([1,2],1)
 # end
 
 # Auxillary data for testing
-case3 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case3.m"));
 case5 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"));
-case24 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case24.m"));
 case14 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case14.m"));
 case18 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/radial_test/case18.m"));
-J_c3 = PowerSensitivities.calc_jacobian_matrix(case3);
 J_c5 = PowerSensitivities.calc_jacobian_matrix(case5);
 J_c24_full = calc_basic_jacobian_matrix(case24);
 J_c24_blocks = PowerSensitivities.calc_jacobian_matrix(case24);

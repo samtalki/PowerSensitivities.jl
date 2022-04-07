@@ -10,17 +10,14 @@ function calc_basic_power_factor(network::Dict{String,<:Any},sel_bus_types=[1,2]
 end
 
 #Calculate power factor without bus truncation
-calc_basic_power_factor(network::Dict{String,<:Any}) =  [cos(θi) for θi in angle.(calc_basic_bus_injection(network))]
+calc_basic_power_factor(network::Dict{String,<:Any}) =  [abs(cos(θi)) for θi in angle.(calc_basic_bus_injection(network))]
 
 """
 Given a real power factor pf return the implicit function theorem representation of pf
 """
 function k(pf::Real)
-    if pf==0
-        return nothing
-    else
-        return sqrt(1-pf^2)/pf
-    end
+    @assert pf<= 1 && pf > 0 "Power factors must be between (0,1]"
+    return sqrt(1-pf^2)/pf
 end
 
 """
@@ -28,11 +25,8 @@ Given a real power factor pf and the reactive power injection return the SIGNED 
 This is used to make entries of the K matrix.
 """
 function k(pf::Real,q::Real)
-    if pf==0
-        return nothing
-    else
-        return -sign(q)*abs(sqrt(1-pf^2)/pf)
-    end
+    @assert pf<= 1 && pf > 0 "Power factors must be between (0,1]"
+    return -sign(q)*abs(sqrt(1-pf^2)/pf)
 end
 
 """
@@ -48,11 +42,8 @@ end
 Given a real valued β, compute inverse function of k
 """
 function kinv(β::Real)
-    if β≤0
-        return nothing
-    else
-        return sqrt(1/(k(β)^2 + 1))
-    end
+    @assert β<= 1 && β > 0 "Arugment of k^{-1} must be between (0,1]"
+    return sqrt(1/(k(β)^2 + 1))
 end
 
 """
@@ -62,8 +53,6 @@ function kinv(network::Dict{String,<:Any},sel_bus_types=[1,2])
     pf = calc_basic_power_factor(network,sel_bus_types)
     return [k_inv(pf_i) for pf_i in pf]
 end
-
-
 
 """
 Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
@@ -93,31 +82,19 @@ function calc_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
     return K
 end
 
-function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
-    K = calc_K_matrix(network,sel_bus_types)
-    k_max = maximum(K)
-    return k_max .- K
-end
-
 """
-Given network data dict, calculate the maximum value of the K matrix
+Given network data dict, calculate the maximum or minimum values of the K matrix
 """
-calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2]) = maximum(calc_K_matrix(network,sel_bus_types))
-calc_k_min(network::Dict{String,<:Any},sel_bus_types=[1,2]) = minimum(calc_K_matrix(network,sel_bus_types))
-
-
+calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2]) = maximum(k(network,sel_bus_types))
+calc_k_min(network::Dict{String,<:Any},sel_bus_types=[1,2]) = minimum(k(network,sel_bus_types))
 
 """
 Given a network data dict, calculate the Δk=k_max-k_min value for the current operating point
 """
 function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
-    idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
-    pf = calc_basic_power_factor(network,sel_bus_types)
-    s = calc_basic_bus_injection(network)[idx_sel_bus_types]
-    p,q = real.(s),imag.(s)
-    pf = [pf_i for (i,pf_i) in enumerate(pf) if abs(p[i])≥ϵ || abs(q[i]≥ϵ)]
     Δk = try 
-        abs(k(maximum(pf)) - k(minimum(pf)))
+        calc_k_max(network,sel_bus_types) - calc_k_min(network,sel_bus_types)
+        #abs(k(maximum(pf)) - k(minimum(pf)))
     catch
         Δk = nothing
     end
@@ -125,7 +102,7 @@ function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
 end
 
 """
-Calculate the M Matrix for theorem 1
+Calculate the M Matrix defined in Theorem 1
 """
 function calc_M_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     ∂p∂θ = calc_pth_jacobian(network,sel_bus_types)
@@ -135,7 +112,6 @@ function calc_M_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     M = k_max*∂p∂θ - ∂q∂θ
     return M
 end
-
 
 """
 Given a network data dict,
@@ -153,14 +129,15 @@ function calc_vmag_condition(network::Dict{String,<:Any},sel_bus_types=[1,2])
     k_max = calc_k_max(network,sel_bus_types)
     M_nonsingular = true
     Δk_max = try
-        (1/(opnorm(inv(Matrix(M)),2)))*(1/(opnorm(Matrix(∂p∂θ),2)));
+        opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
+        #(1/(opnorm(inv(Matrix(M)),2)))*(1/(opnorm(Matrix(∂p∂θ),2)));
     catch
         Δk_max = nothing
         M_nonsingular = false
     end
-    Δk = calc_delta_k(network,sel_bus_types)
+    Δk_obs = calc_delta_k(network,sel_bus_types)
     return Dict(
-        "Δk" => Δk,
+        "Δk_obs" => Δk_obs,
         "M_nonsingular" => M_nonsingular,
         "Δk_max" => Δk_max,
         "k_max" => k_max,
@@ -171,26 +148,32 @@ end
 
 
 
+#### Deprecated
 
-"""
-Given a maximum difference Δk_max between the Q-P sensitivities,
-Calculate the maximum power factor distance
-"""
-function calc_max_pf_distance(Δk_max)
-    model = Model(Ipopt.Optimizer);
-    @variable(model, 1 >= pf_min >= 0);
-    @variable(model, 1>= pf_max >= 0);
-    @objective(model, Max, pf_max - pf_min);
-    @constraint(model, pf_max>=pf_min);
-    @NLconstraint(model, (sqrt(1-pf_min^2)/pf_min) - (sqrt(1-pf_max^2)/pf_max) <= Δk_max  );
-    optimize!(model);
-    pf_min,pf_max = value(pf_min),value(pf_max);
-    Δpf_max = pf_max - pf_min;
-    return Δpf_max
-end
+# """
+# Given a maximum difference Δk_max between the Q-P sensitivities,
+# Calculate the maximum power factor distance
+# """
+# function calc_max_pf_distance(Δk_max)
+#     model = Model(Ipopt.Optimizer);
+#     @variable(model, 1 >= pf_min >= 0);
+#     @variable(model, 1>= pf_max >= 0);
+#     @objective(model, Max, pf_max - pf_min);
+#     @constraint(model, pf_max>=pf_min);
+#     @NLconstraint(model, (sqrt(1-pf_min^2)/pf_min) - (sqrt(1-pf_max^2)/pf_max) <= Δk_max  );
+#     optimize!(model);
+#     pf_min,pf_max = value(pf_min),value(pf_max);
+#     Δpf_max = pf_max - pf_min;
+#     return Δpf_max
+# end
+
+# function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
+#     K = calc_K_matrix(network,sel_bus_types)
+#     k_max = maximum(K)
+#     return k_max .- K
+# end
 
 
-#Deprecated
 # function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
 #     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types);
 #     s = calc_basic_bus_injection(network)[idx_sel_bus_types];
