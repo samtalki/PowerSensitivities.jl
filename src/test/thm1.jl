@@ -218,7 +218,7 @@ function test_pf_min(sel_bus_types=[1,2],network_data_path=network_data_path)
             results[name] = try
                 calc_pf_min(network,sel_bus_types)
             catch
-                continue
+                throw(Exception)
             end
         end
     end
