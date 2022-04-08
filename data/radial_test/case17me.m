@@ -1,11 +1,5 @@
 function mpc = case17me
-%CASE17ME  Power flow data for 18 bus distribution system from Mendoza, et al
-%   Please see CASEFORMAT for details on the case file format.
-%
-%   Data from ...
-%       Mendoza J, Morales D, Lopez R, et al (2007) Multi-objective Location
-%       of Automatic Voltage Regulators in a Radial Distribution Network Using
-%       a Micro Genetic Algorithm. IEEE Trans Power Syst 22:404-411.
+%CASE17ME
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';

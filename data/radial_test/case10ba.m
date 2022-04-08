@@ -1,11 +1,5 @@
 function mpc = case10ba
-%CASE10BA  Power flow data for 10 bus distribution system from Baghzouz & Ertem
-%   Please see CASEFORMAT for details on the case file format.
-%
-%   Data from ...
-%       Baghzouz Y, Ertem S., "Shunt capacitor sizing for radial
-%       distribution feeders with distorted substation voltages",
-%       IEEE Trans. Power Deliv., vol.5, 1990, pp. 650-657.
+%CASE10BA
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';
@@ -16,17 +10,17 @@ mpc.baseMVA = 10;
 
 %% bus data
 %	bus_i	type	Pd	Qd	Gs	Bs	area	Vm	Va	baseKV	zone	Vmax	Vmin
-mpc.bus = [ %% (Pd and Qd are specified in kW & kVAr here, converted to MW & MVAr below)
+mpc.bus = [
 	1	3	0	0	0	0	1	1	0	23	1	1	1;
-	2	1	1840	460	0	0	1	1	0	23	1	1.1	0.9;
-	3	1	980	340	0	0	1	1	0	23	1	1.1	0.9;
-	4	1	1790	446	0	0	1	1	0	23	1	1.1	0.9;
-	5	1	1598	1840	0	0	1	1	0	23	1	1.1	0.9;
-	6	1	1610	600	0	0	1	1	0	23	1	1.1	0.9;
-	7	1	780	110	0	0	1	1	0	23	1	1.1	0.9;
-	8	1	1150	60	0	0	1	1	0	23	1	1.1	0.9;
-	9	1	980	130	0	0	1	1	0	23	1	1.1	0.9;
-	10	1	1640	200	0	0	1	1	0	23	1	1.1	0.9;
+	2	1	1.84	0.46	0	0	1	1	0	23	1	1.1	0.9;
+	3	1	0.98	0.34	0	0	1	1	0	23	1	1.1	0.9;
+	4	1	1.79	0.446	0	0	1	1	0	23	1	1.1	0.9;
+	5	1	1.598	1.84	0	0	1	1	0	23	1	1.1	0.9;
+	6	1	1.61	0.6	0	0	1	1	0	23	1	1.1	0.9;
+	7	1	0.78	0.11	0	0	1	1	0	23	1	1.1	0.9;
+	8	1	1.15	0.06	0	0	1	1	0	23	1	1.1	0.9;
+	9	1	0.98	0.13	0	0	1	1	0	23	1	1.1	0.9;
+	10	1	1.64	0.2	0	0	1	1	0	23	1	1.1	0.9;
 ];
 
 %% generator data
@@ -37,16 +31,16 @@ mpc.gen = [
 
 %% branch data
 %	fbus	tbus	r	x	b	rateA	rateB	rateC	ratio	angle	status	angmin	angmax
-mpc.branch = [  %% (r and x specified in ohms here, converted to p.u. below)
-	1	2	0.1233	0.4127	0	0	0	0	0	0	1	-360	360;
-	2	3	0.014	0.6051	0	0	0	0	0	0	1	-360	360;
-	3	4	0.7463	1.205	0	0	0	0	0	0	1	-360	360;
-	4	5	0.6984	0.6084	0	0	0	0	0	0	1	-360	360;
-	5	6	1.9831	1.7276	0	0	0	0	0	0	1	-360	360;
-	6	7	0.9053	0.7886	0	0	0	0	0	0	1	-360	360;
-	7	8	2.0552	1.164	0	0	0	0	0	0	1	-360	360;
-	8	9	4.7953	2.716	0	0	0	0	0	0	1	-360	360;
-	9	10	5.3434	3.0264	0	0	0	0	0	0	1	-360	360;
+mpc.branch = [
+	1	2	0.00233081285	0.00780151229	0	0	0	0	0	0	1	-360	360;
+	2	3	0.000264650284	0.0114385633	0	0	0	0	0	0	1	-360	360;
+	3	4	0.0141077505	0.022778828	0	0	0	0	0	0	1	-360	360;
+	4	5	0.0132022684	0.0115009452	0	0	0	0	0	0	1	-360	360;
+	5	6	0.0374877127	0.032657845	0	0	0	0	0	0	1	-360	360;
+	6	7	0.0171134216	0.0149073724	0	0	0	0	0	0	1	-360	360;
+	7	8	0.0388506616	0.0220037807	0	0	0	0	0	0	1	-360	360;
+	8	9	0.0906483932	0.051342155	0	0	0	0	0	0	1	-360	360;
+	9	10	0.101009452	0.0572098299	0	0	0	0	0	0	1	-360	360;
 ];
 
 %%-----  OPF Data  -----%%
@@ -56,17 +50,3 @@ mpc.branch = [  %% (r and x specified in ohms here, converted to p.u. below)
 mpc.gencost = [
 	2	0	0	3	0	20	0;
 ];
-
-
-% %% convert branch impedances from Ohms to p.u.
-% [PQ, PV, REF, NONE, BUS_I, BUS_TYPE, PD, QD, GS, BS, BUS_AREA, VM, ...
-%     VA, BASE_KV, ZONE, VMAX, VMIN, LAM_P, LAM_Q, MU_VMAX, MU_VMIN] = idx_bus;
-% [F_BUS, T_BUS, BR_R, BR_X, BR_B, RATE_A, RATE_B, RATE_C, ...
-%     TAP, SHIFT, BR_STATUS, PF, QF, PT, QT, MU_SF, MU_ST, ...
-%     ANGMIN, ANGMAX, MU_ANGMIN, MU_ANGMAX] = idx_brch;
-% Vbase = mpc.bus(1, BASE_KV) * 1e3;      %% in Volts
-% Sbase = mpc.baseMVA * 1e6;              %% in VA
-% mpc.branch(:, [BR_R BR_X]) = mpc.branch(:, [BR_R BR_X]) / (Vbase^2 / Sbase);
-
-% %% convert loads from kW to MW
-% mpc.bus(:, [PD, QD]) = mpc.bus(:, [PD, QD]) / 1e3;

@@ -1,8 +1,5 @@
 function mpc = case4_dist
-%CASE4_DIST  Power flow data for 4 bus radial distribution system
-%   Please see CASEFORMAT for details on the case file format.
-
-%   MATPOWER
+%CASE4_DIST
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';

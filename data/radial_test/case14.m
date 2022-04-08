@@ -1,16 +1,5 @@
 function mpc = case14
-%CASE14    Power flow data for IEEE 14 bus test case.
-%   Please see CASEFORMAT for details on the case file format.
-%   This data was converted from IEEE Common Data Format
-%   (ieee14cdf.txt) on 15-Oct-2014 by cdf2matp, rev. 2393
-%   See end of file for warnings generated during conversion.
-%
-%   Converted from IEEE CDF file from:
-%       https://labs.ece.uw.edu/pstca/
-% 
-%  08/19/93 UW ARCHIVE           100.0  1962 W IEEE 14 Bus Test Case
-
-%   MATPOWER
+%CASE14
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';
@@ -102,28 +91,3 @@ mpc.bus_name = {
 	'Bus 13    LV';
 	'Bus 14    LV';
 };
-
-% Warnings from cdf2matp conversion:
-%
-% ***** check the title format in the first line of the cdf file.
-% ***** Qmax = Qmin at generator at bus    1 (Qmax set to Qmin + 10)
-% ***** MVA limit of branch 1 - 2 not given, set to 0
-% ***** MVA limit of branch 1 - 5 not given, set to 0
-% ***** MVA limit of branch 2 - 3 not given, set to 0
-% ***** MVA limit of branch 2 - 4 not given, set to 0
-% ***** MVA limit of branch 2 - 5 not given, set to 0
-% ***** MVA limit of branch 3 - 4 not given, set to 0
-% ***** MVA limit of branch 4 - 5 not given, set to 0
-% ***** MVA limit of branch 4 - 7 not given, set to 0
-% ***** MVA limit of branch 4 - 9 not given, set to 0
-% ***** MVA limit of branch 5 - 6 not given, set to 0
-% ***** MVA limit of branch 6 - 11 not given, set to 0
-% ***** MVA limit of branch 6 - 12 not given, set to 0
-% ***** MVA limit of branch 6 - 13 not given, set to 0
-% ***** MVA limit of branch 7 - 8 not given, set to 0
-% ***** MVA limit of branch 7 - 9 not given, set to 0
-% ***** MVA limit of branch 9 - 10 not given, set to 0
-% ***** MVA limit of branch 9 - 14 not given, set to 0
-% ***** MVA limit of branch 10 - 11 not given, set to 0
-% ***** MVA limit of branch 12 - 13 not given, set to 0
-% ***** MVA limit of branch 13 - 14 not given, set to 0

@@ -1,10 +1,5 @@
 function mpc = case9target
-%CASE9TARGET    Target injection power flow data for 9 bus, 3 generator case.
-%   Please see CASEFORMAT for details on the case file format.
-%
-%   Modified version of case9.m used as target for example CPF.
-
-%   MATPOWER
+%CASE9TARGET
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';

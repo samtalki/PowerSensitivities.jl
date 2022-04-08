@@ -1,21 +1,5 @@
 function mpc = case30
-%CASE30    Power flow data for 30 bus, 6 generator case.
-%   Please see CASEFORMAT for details on the case file format.
-%
-%   Based on data from ...
-%     Alsac, O. & Stott, B., "Optimal Load Flow with Steady State Security",
-%     IEEE Transactions on Power Apparatus and Systems, Vol. PAS 93, No. 3,
-%     1974, pp. 745-751.
-%   ... with branch parameters rounded to nearest 0.01, shunt values divided
-%   by 100 and shunt on bus 10 moved to bus 5, load at bus 5 zeroed out.
-%   Generator locations, costs and limits and bus areas were taken from ...
-%     Ferrero, R.W., Shahidehpour, S.M., Ramesh, V.C., "Transaction analysis
-%     in deregulated power systems using game theory", IEEE Transactions on
-%     Power Systems, Vol. 12, No. 3, Aug 1997, pp. 1340-1347.
-%   Generator Q limits were derived from Alsac & Stott, using their Pmax
-%   capacities. V limits and line |S| limits taken from Alsac & Stott.
-
-%   MATPOWER
+%CASE30
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';

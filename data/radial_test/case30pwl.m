@@ -1,10 +1,5 @@
 function mpc = case30pwl
-%CASE30PWL    Case 30 with piece-wise linear generator costs.
-%   Please see CASEFORMAT for details on the case file format.
-%
-%   Identical to case30.m, except with piece-wise linear generator costs.
-
-%   MATPOWER
+%CASE30PWL
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';

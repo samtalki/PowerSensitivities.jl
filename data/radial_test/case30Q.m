@@ -1,11 +1,5 @@
 function mpc = case30Q
-%CASE30Q    Case 30 with costs for reactive generation.
-%   Please see CASEFORMAT for details on the case file format.
-%
-%   Identical to case30.m, with the addition of non-zero costs for
-%   reactive power.
-
-%   MATPOWER
+%CASE30Q
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';

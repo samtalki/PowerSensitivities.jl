@@ -1,11 +1,5 @@
 function mpc = case4gs
-%CASE4GS  Power flow data for 4 bus, 2 gen case from Grainger & Stevenson.
-%   Please see CASEFORMAT for details on the case file format.
-%
-%   This is the 4 bus example from pp. 337-338 of "Power System Analysis",
-%   by John Grainger, Jr., William Stevenson, McGraw-Hill, 1994.
-
-%   MATPOWER
+%CASE4GS
 
 %% MATPOWER Case Format : Version 2
 mpc.version = '2';
