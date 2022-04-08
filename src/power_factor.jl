@@ -85,8 +85,8 @@ end
 """
 Given network data dict, calculate the maximum or minimum values of the K matrix
 """
-calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2]) = maximum(k(network,sel_bus_types))
-calc_k_min(network::Dict{String,<:Any},sel_bus_types=[1,2]) = minimum(k(network,sel_bus_types))
+calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2]) = maximum(diag(calc_K_matrix(network,sel_bus_types)))
+calc_k_min(network::Dict{String,<:Any},sel_bus_types=[1,2]) = minimum(diag(calc_K_matrix(network,sel_bus_types)))
 
 """
 Given a network data dict, calculate the Δk=k_max-k_min value for the current operating point
@@ -102,17 +102,21 @@ function calc_delta_k(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
 end
 
 """
-Calculate the M Matrix defined in Theorem 1
+Given network data dict and sel_bus_types, calculate the M Matrix defined in Theorem 1
 """
 function calc_M_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2])
     ∂p∂θ = calc_pth_jacobian(network,sel_bus_types)
     ∂q∂θ = calc_qth_jacobian(network,sel_bus_types)
-    #k_max = maximum(k(network,sel_bus_types))
     k_max = calc_k_max(network,sel_bus_types)
     M = k_max*∂p∂θ - ∂q∂θ
     return M
 end
 
+"""
+Given k_max, ∂p∂θ, and ∂q∂θ, calculate the M Matrix defined in Theorem 1
+"""
+calc_M_matrix(k_max::Real,∂p∂θ::AbstractMatrix,∂q∂θ::AbstractMatrix) = k_max*∂p∂θ - ∂q∂θ
+    
 """
 Given a network data dict,
 Compute the maximum difference between nodal power factors so that complex power injections can be modeled from voltage magnitudes
@@ -130,7 +134,6 @@ function calc_vmag_condition(network::Dict{String,<:Any},sel_bus_types=[1,2])
     M_nonsingular = true
     Δk_max = try
         opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
-        #(1/(opnorm(inv(Matrix(M)),2)))*(1/(opnorm(Matrix(∂p∂θ),2)));
     catch
         Δk_max = nothing
         M_nonsingular = false
@@ -166,13 +169,6 @@ end
 #     Δpf_max = pf_max - pf_min;
 #     return Δpf_max
 # end
-
-# function calc_delta_K_matrix(network::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
-#     K = calc_K_matrix(network,sel_bus_types)
-#     k_max = maximum(K)
-#     return k_max .- K
-# end
-
 
 # function calc_k_max(network::Dict{String,<:Any},sel_bus_types=[1,2])
 #     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types);
