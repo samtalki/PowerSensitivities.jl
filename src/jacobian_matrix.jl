@@ -57,37 +57,75 @@ function calc_jacobian_matrix(data::Dict{String,<:Any},sel_bus_types)
     return JacobianMatrix(idx_to_bus,bus_to_idx,bus_types,J,pth,qth,pv,qv)
 end
 
-"""
-Given a network network dict, find the bus indeces that have bus_types in sel_bus_types .
-"""
-function calc_bus_idx_of_type(network,sel_bus_types)
-    bus_ordered = get_bus_ordered(network)
-    bus_types = [bus["bus_type"] for bus in bus_ordered]
-    idx_sel_bus_types = findall(bus_idx-> bus_idx ∈ sel_bus_types,bus_types)
-    return idx_sel_bus_types
-end
+
 
 """
-Given a network network dict, return the bus dictionaries that have bus_types in sel_bus_types.
+Computes the Jacobian submatrices
+H = dP/dδ
+L = dQ/dV
+The derivatives are ordered according to the bus number, 
+H[1, 1] is ∂P_1 / ∂δ_1
+H[1, 2] is ∂P_1 / ∂δ_2
+It does not exclude PV buses rows and columns
 """
-function get_bus_of_type(network,sel_bus_types)
-    bus_of_type = filter(d->d.second["bus_type"]sel_bus_types,network["bus"])
-    return bus_of_type
-end
-
-"""
-Get ordered vector of buses
-"""
-function get_bus_ordered(network)
-    b = [bus for (i,bus) in network["bus"] if bus["bus_type"] != 4]
-    bus_ordered = sort(b, by=(x) -> x["index"])
-    return bus_ordered
-end
-
-function get_bus_ordered(network,sel_bus_types)
-    b = [bus for (i,bus) in network["bus"] if bus["bus_type"]∈sel_bus_types]
-    bus_ordered = sort(b, by=(x) -> x["index"])
-    return bus_ordered
+function calc_basic_decoupled_jacobian_matrices(data::Dict{String,<:Any})
+    if !get(data, "basic_network", false)
+        Memento.warn(_LOGGER, "calc_basic_decoupled_jacobian_matrices requires basic network data and given data may be incompatible. make_basic_network can be used to transform data into the appropriate form.")
+    end
+    num_bus = length(data["bus"])
+    v = calc_basic_bus_voltage(data)
+    vm, va = abs.(v), angle.(v)
+    Y = calc_basic_admittance_matrix(data)
+    neighbors = [Set{Int}([i]) for i in 1:num_bus]
+    I, J, V = findnz(Y)
+    for nz in eachindex(V)
+        push!(neighbors[I[nz]], J[nz])
+        push!(neighbors[J[nz]], I[nz])
+    end
+    H0_I = Int64[]; H0_J = Int64[]; H0_V = Float64[];
+    L0_I = Int64[]; L0_J = Int64[]; L0_V = Float64[];
+    for i in 1:num_bus
+        for j in neighbors[i]
+            push!(H0_I, i); push!(H0_J, j); push!(H0_V, 0.0)
+            push!(L0_I, i); push!(L0_J, j); push!(L0_V, 0.0)
+        end
+    end
+    H = sparse(H0_I, H0_J, H0_V)
+    L = sparse(L0_I, L0_J, L0_V)
+    for i in 1:num_bus
+        for j in neighbors[i]
+            bus_type = data["bus"]["$(j)"]["bus_type"]
+            if bus_type == 1
+                if i == j
+                    y_ii = Y[i,i]
+                    H[i, j] =                      + vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
+                    L[i, j] = - 2*imag(y_ii)*vm[i] +         sum(  real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) - imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
+                else
+                    y_ij = Y[i,j]
+                    H[i, j] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
+                    L[i, j] =         vm[i] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
+                end
+            elseif bus_type == 2
+                if i == j
+                    y_ii = Y[i,i]
+                    H[i, j] = vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
+                    L[i, j] = 1.0
+                else
+                    y_ij = Y[i,j]
+                    H[i, j] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
+                    L[i, j] = 0.0
+                end
+            elseif bus_type == 3
+                if i == j
+                    H[i, j] = 1.0
+                    L[i, j] = 1.0
+                end
+            else
+                @assert false
+            end
+        end
+    end
+    return H, L
 end
 
 
@@ -175,75 +213,3 @@ end
 #     end
 #     return J
 # end
-
-
-"""
-Computes the Jacobian submatrices
-H = dP/dδ
-L = dQ/dV
-The derivatives are ordered according to the bus number, 
-H[1, 1] is ∂P_1 / ∂δ_1
-H[1, 2] is ∂P_1 / ∂δ_2
-It does not exclude PV buses rows and columns
-"""
-function calc_basic_decoupled_jacobian_matrices(data::Dict{String,<:Any})
-    if !get(data, "basic_network", false)
-        Memento.warn(_LOGGER, "calc_basic_decoupled_jacobian_matrices requires basic network data and given data may be incompatible. make_basic_network can be used to transform data into the appropriate form.")
-    end
-    num_bus = length(data["bus"])
-    v = calc_basic_bus_voltage(data)
-    vm, va = abs.(v), angle.(v)
-    Y = calc_basic_admittance_matrix(data)
-    neighbors = [Set{Int}([i]) for i in 1:num_bus]
-    I, J, V = findnz(Y)
-    for nz in eachindex(V)
-        push!(neighbors[I[nz]], J[nz])
-        push!(neighbors[J[nz]], I[nz])
-    end
-    H0_I = Int64[]; H0_J = Int64[]; H0_V = Float64[];
-    L0_I = Int64[]; L0_J = Int64[]; L0_V = Float64[];
-    for i in 1:num_bus
-        for j in neighbors[i]
-            push!(H0_I, i); push!(H0_J, j); push!(H0_V, 0.0)
-            push!(L0_I, i); push!(L0_J, j); push!(L0_V, 0.0)
-        end
-    end
-    H = sparse(H0_I, H0_J, H0_V)
-    L = sparse(L0_I, L0_J, L0_V)
-    for i in 1:num_bus
-        for j in neighbors[i]
-            bus_type = data["bus"]["$(j)"]["bus_type"]
-            if bus_type == 1
-                if i == j
-                    y_ii = Y[i,i]
-                    H[i, j] =                      + vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
-                    L[i, j] = - 2*imag(y_ii)*vm[i] +         sum(  real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) - imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
-                else
-                    y_ij = Y[i,j]
-                    H[i, j] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
-                    L[i, j] =         vm[i] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
-                end
-            elseif bus_type == 2
-                if i == j
-                    y_ii = Y[i,i]
-                    H[i, j] = vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
-                    L[i, j] = 1.0
-                else
-                    y_ij = Y[i,j]
-                    H[i, j] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
-                    L[i, j] = 0.0
-                end
-            elseif bus_type == 3
-                if i == j
-                    H[i, j] = 1.0
-                    L[i, j] = 1.0
-                end
-            else
-                @assert false
-            end
-        end
-    end
-    return H, L
-end
-
-
