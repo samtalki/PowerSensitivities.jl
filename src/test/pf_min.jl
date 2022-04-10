@@ -1,13 +1,20 @@
 ## Calculate the minimum power factor
 include("../PowerSensitivities.jl")
 include("../util/matrix.jl")
-using PowerModels: parse_file,make_basic_network,calc_basic_jacobian_matrix,calc_basic_bus_injection,calc_basic_bus_voltage
 import .PowerSensitivities
+using PowerModels: parse_file,make_basic_network
+using Plots, LaTeXStrings
+theme(:ggplot2)
 
 #Test case path and parameters
 #network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
 network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
 allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
+
+#Select networks to plot
+global study_network_names = ["case4_dist.m" "case15da.m" "case16ci.m" "case28da.m" "case34sa.m" "case69.m" "case136ma.m"]
+#Select maximum power factors to test
+global pf_max = 0.75:0.01:1
 
 """
 Given:
@@ -18,67 +25,35 @@ Compute:
     the minimum power factor pf_min such that the complex power injections are observable
 """
 function calc_pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2],pf_max::Real=1)
-    bad_idx = PowerSensitivities.calc_bad_idx(network,sel_bus_types)
-    ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network,sel_bus_types)[bad_idx,bad_idx]
-    ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network,sel_bus_types)[bad_idx,bad_idx]
-    K = PowerSensitivities.calc_K_matrix(network,sel_bus_types)[bad_idx,bad_idx]
-    k_max = maximum(diag(K))
-    M = PowerSensitivities.calc_M_matrix(k_max,∂p∂θ,∂q∂θ)
+    #Compute the indeces that will be considered
+    bad_idx = PowerSensitivities.calc_bad_idx(network)
+    study_idx = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    #study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
+    #Compute the matrices of interest
+    #K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
+    ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
+    ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
+    #k_max = maximum(diag(K))
+    #M = k_max*∂p∂θ - ∂q∂θ
+    M = PowerSensitivities.k(pf_max)*∂p∂θ - ∂q∂θ
+    #Check the sizes
+    #@assert size(∂p∂θ,1) == length(study_idx) && size(∂p∂θ,2) == length(study_idx)
+    #@assert size(∂q∂θ,1) == length(study_idx) && size(∂q∂θ,2) == length(study_idx)
+    #@assert size(K,1) == length(study_idx) && size(K,2) == length(study_idx)
+    #Compute the bound on Δk
     if pf_max==1
         pf_min = PowerSensitivities.kinv(
-            opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
-        )
+            (opnorm(inv(M))^-1)*(opnorm(∂p∂θ)^-1))
     else
         pf_min = PowerSensitivities.kinv(
-            PowerSensitivities.k(pf_max) + opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
-        )
+            PowerSensitivities.k(pf_max) + (opnorm(inv(M))^-1)*(opnorm(∂p∂θ)^-1))
+        if pf_min>pf_max
+            pf_min = NaN
+        end
     end
     return pf_min
 end
 
-"""
-Given:
-    a network data dict under study,
-    and the selected bus types under study
-Compute:
-    the maximum value of the K matrix k_max, which is used to compute:
-    the minimum power factor pf_min such that the complex power injections are observable
-"""
-function calc_pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2])
-    M = PowerSensitivities.calc_M_matrix(network,sel_bus_types) #Compute the M matrix
-    ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network,sel_bus_types) #Compute the power-angle jacobian
-    k_max = PowerSensitivities.calc_k_max(network,sel_bus_types) #Compute the actual observed k_max
-    pf_min = PowerSensitivities.kinv(
-        k_max + opnorm(inv(M))^(-1)*opnorm(∂p∂θ)^(-1)
-    )
-    return pf_min
-end
-
-"""
-Given chosen bus types under study and folder of test cases under study,
-Compute the minimum power factor implied by Theorem 1 of Talkington and Turizo et al. for the feeder models in network_data_path
-"""
-function test_pf_min(sel_bus_types=[1,2],network_data_path=network_data_path)
-    names = readdir(network_data_path);
-    paths = readdir(network_data_path,join=true);
-    results = Dict()
-    for (name,path) in zip(names,paths)
-        network =  try
-            make_basic_network(parse_file(path));
-        catch
-            println("PM cannot parse "*name)
-            continue
-        end
-        if PowerSensitivities.is_radial(network) || allow_mesh
-            results[name] = try
-                calc_pf_min(network,sel_bus_types)
-            catch
-                results[name] = nothing
-            end
-        end
-    end
-    return results
-end
 
 """
 Given chosen bus types under study, a maximum power factor, and folder of test cases under study,
@@ -87,29 +62,57 @@ Compute the minimum power factor implied by Theorem 1 of Talkington and Turizo e
 function test_pf_min(sel_bus_types=[1,2],pf_max::Real=1,network_data_path=network_data_path)
     names = readdir(network_data_path);
     paths = readdir(network_data_path,join=true);
-    results = Dict()
+    pf_min = Dict()
     for (name,path) in zip(names,paths)
-        network =  try
-            make_basic_network(parse_file(path));
-        catch
-            println("PM cannot parse "*name)
-            continue
-        end
-        if PowerSensitivities.is_radial(network) || allow_mesh
-            results[name] = try
-                calc_pf_min(network,sel_bus_types,pf_max)
+        if name ∈ study_network_names
+            network =  try
+                make_basic_network(parse_file(path));
             catch
-                results[name] = nothing
+                println("PM cannot parse "*name)
+                continue
+            end
+            if PowerSensitivities.is_radial(network) || allow_mesh
+                pf_min[name] = try
+                    calc_pf_min(network,sel_bus_types,pf_max)
+                catch
+                    pf_min[name] = NaN
+                end
             end
         end
     end
-    return results
+    return pf_min
 end
 
-#Compute the minimum bus power factors
-#Actual kmax of operating point
-pf_min_pq = test_pf_min([1])
-pf_min_pq_pv = test_pf_min([1,2])
-#Maximum power factor of unity
-pf_min_unity_pq = test_pf_min([1],1.)
-pf_min_unity_pq_pv = test_pf_min([1,2],1.)
+
+begin
+    #Compute the minimum bus power factors at unity max power factor
+    pf_min_unity = test_pf_min([1],1)
+    #Compute the minimum bus power factors for a range of power factors - store as a matrix
+    pf_min_nonunity = zeros((length(pf_max),length(study_network_names))) #Store as a matrix
+    for (i,pf_max_i) in enumerate(pf_max)
+        pf_min = test_pf_min([1],pf_max_i)
+        for (j,net_name) in enumerate(study_network_names) #Fill up the matrix for potting
+            pf_min_nonunity[i,j] = pf_min[net_name]
+        end
+    end
+    #Plot the minimum power factors
+    plot(pf_max,pf_min_nonunity,
+        title="Minimum vs. Maximum Power Factor",
+        label=study_network_names,
+        lw=2,alpha=0.8,
+        linestyle=:dot,
+        markershape=:square,
+        markersize=3,
+        markeralpha=0.25,
+        xaxis=("Chosen "*L"\alpha_{\rm max}",font(pointsize=12)),
+        yaxis=(L"\alpha_{\rm min} = k^{-1}(k(\alpha_{\rm max}) + \Delta k_{\rm max})",font(pointsize=11)),
+        legend_position=:bottomleft,
+        dpi=300,
+        #size=(floor(3.5*400),floor((3.5/1.61828)*400))
+        )
+    savefig("figures/spring_22/pf_min.png")
+end
+
+
+
+

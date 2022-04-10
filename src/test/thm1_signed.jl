@@ -1,22 +1,85 @@
+#Test theorem 1 while allowing non-inducitve injections
 include("../PowerSensitivities.jl")
 include("../util/matrix.jl")
 using PowerModels
 using LinearAlgebra
-#using PowerSensitivities: calc_K_matrix,calc_pth_jacobian,calc_qth_jacobian,calc_bus_idx_of_type,calc_bad_idx,is_radial
+using Statistics
 import .PowerSensitivities
 
+calc_basic_power_factor(network::Dict{String,<:Any}) =  [cos(θi) for θi in angle.(calc_basic_bus_injection(network))]
+
+"""
+Given a network data dict, calculate the "bad indeces" that do not satisfy the assumptions of Theorem 1
+"""
+function calc_bad_idx(network::Dict{String,<:Any},ϵ=1e-6)
+    s = calc_basic_bus_injection(network);
+    p,q,pf = real.(s),imag.(s),calc_basic_power_factor(network) 
+    bad_idx = [] #Array of indeces with zero p or zero MVA injections to be discarded
+    for (i,pf_i) in enumerate(pf)
+        #Ignore buses with zero power injection
+        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ 
+            push!(bad_idx,i)
+        #Ignore buses with zero power factor
+        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0
+            push!(bad_idx,i) #K[i,i] = 0
+        # #Ignore buses with capacitive injections
+        # elseif q[i] > 0 
+        #    push!(bad_idx,i)
+        else
+            continue
+        end
+    end
+    return bad_idx
+end
+
+"""
+Given a real power factor pf return the implicit function theorem representation of pf
+"""
+function k(pf::Real)
+    #@assert pf<= 1 && pf > 0 "Power factors must be between (0,1]"
+    return sqrt(1-pf^2)/pf
+end
+
+"""
+Given a real power factor pf and the reactive power injection return the SIGNED implicit function theorem representation of pf
+This is used to make entries of the K matrix.
+"""
+function k(pf::Real,q::Real)
+    #@assert pf<= 1 && pf > 0 "Power factors must be between (0,1]"
+    return sign(q)*(sqrt(1-pf^2)/pf)
+end
+
+"""
+Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
+"""
+function calc_K_matrix(network::Dict{String,<:Any},ϵ=1e-6)
+    bad_idx = calc_bad_idx(network) #Array of indeces with zero p or zero MVA injections to be discarded
+    pf = calc_basic_power_factor(network) 
+    n = length(pf)
+    K = zeros((n,n))
+    q = imag.(calc_basic_bus_injection(network))
+    for (i,pf_i) in enumerate(pf)
+        q_i = q[i]
+        K[i,i] = k(pf_i,q_i) #k(pf_i,q[i])#sqrt(1-pf_i^2)/pf_i
+    end
+    k_mean = mean(diag(K)[[i for i in 1:n if i ∉ bad_idx]]) #Replace the bad indeces with the mean of the other k entries
+    for i in bad_idx
+        K[i,i] = k_mean ## Replace k entry at bad idx with the mean of other ks.
+    end
+    return K
+end
 
 
 """
 Given a network data dict, tests theorem 1 conditions
 """
-function test_thm1(network::Dict,sel_bus_types=[1],ϵ=1e-6)
+function test_thm1(network::Dict,sel_bus_types=[1,2,3],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
+    bad_idx = calc_bad_idx_no_q_constraints(network,ϵ)
     idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrices of interest
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
+    K = calc_K_matrix(network)[study_idx,study_idx]
     ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
     ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
     #Check the sizes
@@ -34,15 +97,15 @@ end
 """
 Given a network data dict,
 Calculate RHS of inequality "Δk_max" with the option drop_bad_idx.
-If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx are discarded.
+If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx_no_q_constraints are discarded.
 """
-function calc_Δk_bound(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
+function calc_Δk_bound(network::Dict{String,<:Any},sel_bus_types=[1,2,3],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
+    bad_idx = calc_bad_idx_no_q_constraints(network,ϵ)
     idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrices of interest
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
+    K = calc_K_matrix(network)[study_idx,study_idx]
     ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
     ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
     k_max = maximum(diag(K))
@@ -63,16 +126,16 @@ end
 """
 Given a network data dict,
 Calculate LHS of inequality "Δk" with the option drop_bad_idx.
-If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx are discarded.
+If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx_no_q_constraints are discarded.
 """
-function calc_Δk_observed(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
+function calc_Δk_observed(network::Dict{String,<:Any},sel_bus_types=[1,2,3],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
+    bad_idx = calc_bad_idx_no_q_constraints(network,ϵ)
     idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrix K and the bus power factors
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
-    pf = PowerSensitivities.calc_basic_power_factor(network)[study_idx]
+    K = calc_K_matrix(network)[study_idx,study_idx]
+    pf = calc_basic_power_factor(network)[study_idx]
     #Check the sizes are consistent
     @assert size(K,1) == length(study_idx) && size(K,2) == length(study_idx)
     @assert length(pf) == length(study_idx) #Check sizes are consistent
@@ -98,14 +161,14 @@ end
 Given a network data dict,
 Compute the maximum difference between nodal power factors so that complex power injections can be modeled from voltage magnitudes
 """
-function calc_thm1_data(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
+function calc_thm1_data(network::Dict{String,<:Any},sel_bus_types=[1,2,3],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
+    bad_idx = calc_bad_idx_no_q_constraints(network,ϵ)
     idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrices of interest
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
-    pf = PowerSensitivities.calc_basic_power_factor(network)[study_idx]
+    K = calc_K_matrix(network)[study_idx,study_idx]
+    pf = calc_basic_power_factor(network)[study_idx]
     ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
     ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
     k_max = maximum(diag(K))
@@ -127,14 +190,16 @@ function calc_thm1_data(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
         "study_idx"=> study_idx)
 end
 
-#Radial cases
-#Test case path and parameters
-#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
-allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
-names = readdir(network_data_path);
-paths = readdir(network_data_path,join=true);
-begin    
+
+begin
+    #Test case path and parameters
+    #network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
+    network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
+    allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
+
+    names = readdir(network_data_path,sort=false);
+    paths = readdir(network_data_path,join=true,sort=false);
+
     #Results dicts
     thm1_results = Dict()
     thm1_weak_rhs = Dict()
@@ -163,13 +228,9 @@ end
 
 
 #Non-radial cases
-mesh_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
-names = readdir(mesh_data_path);
-paths = readdir(mesh_data_path,join=true);
 begin
     #Results dicts
     mesh_thm1_results = Dict()
-    mesh_thm1_results_pq_pv = Dict()
     mesh_thm1_weak_rhs = Dict()
     mesh_thm1_weak_lhs = Dict()
     mesh_thm1_data = Dict()
@@ -181,16 +242,10 @@ begin
             continue
         end
         if !PowerSensitivities.is_radial(network) 
-            try
-                mesh_thm1_results[name] = test_thm1(network)
-                mesh_thm1_results_pq_pv[name] = test_thm1(network,[1,2])
-                mesh_thm1_weak_rhs[name] = calc_Δk_bound(network)
-                mesh_thm1_weak_lhs[name] = calc_Δk_observed(network)
-                mesh_thm1_data[name] = calc_thm1_data(network)
-            catch
-                continue
-            end
-            
+            mesh_thm1_results[name] = test_thm1(network)
+            mesh_thm1_weak_rhs[name] = calc_Δk_bound(network)
+            mesh_thm1_weak_lhs[name] = calc_Δk_observed(network)
+            mesh_thm1_data[name] = calc_thm1_data(network)
         end
     end
 end
