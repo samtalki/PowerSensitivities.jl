@@ -37,8 +37,8 @@ function calc_pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2],pf_max::Rea
     #M = k_max*∂p∂θ - ∂q∂θ
     M = PowerSensitivities.k(pf_max)*∂p∂θ - ∂q∂θ
     #Check the sizes
-    #@assert size(∂p∂θ,1) == length(study_idx) && size(∂p∂θ,2) == length(study_idx)
-    #@assert size(∂q∂θ,1) == length(study_idx) && size(∂q∂θ,2) == length(study_idx)
+    @assert size(∂p∂θ,1) == length(study_idx) && size(∂p∂θ,2) == length(study_idx)
+    @assert size(∂q∂θ,1) == length(study_idx) && size(∂q∂θ,2) == length(study_idx)
     #@assert size(K,1) == length(study_idx) && size(K,2) == length(study_idx)
     #Compute the bound on Δk
     if pf_max==1
