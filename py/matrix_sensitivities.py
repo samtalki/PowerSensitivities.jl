@@ -29,12 +29,15 @@ def mat_rec_problem(S,S_0,dx,dv,lamb,o,delta):
         o: measurement operator matrix    
         delta: penalty to match this warm start.
     """
+    (n,tn) = S_0.shape #Wide Stilde matrix shape
     known_values_idx = np.where(o==1)
     known_values = S_0[known_values_idx] #known values
     #Matrix recovery loss function with nuclear norm regularization
     obj = cp.Minimize(cp.sum_squares(S@dx - dv) + lamb*cp.norm(S,"nuc"))
-    #Constraint on straying too far from known values
-    cons = [cp.norm(S[known_values_idx] - known_values) <= delta] 
+    cons = [
+        (cp.norm(S[known_values_idx] - known_values) <= delta),  #Constraint on straying too far from known values
+        (S[:,:n] >> 0) #The voltage-power sensitivity matrix must be positive semidefinite.
+        ] 
     prob = cp.Problem(objective=obj,constraints=cons)
     return prob
 
@@ -52,7 +55,7 @@ def mat_rec_solution(S_0,dx,dv,lamb,o,delta=1e-3,verbose=True):
     """
     S = cp.Variable(S_0.shape)
     prob = mat_rec_problem(S,S_0,dx,dv,lamb,o,delta)
-    prob.solve(verbose=verbose)
+    prob.solve(verbose=verbose,requires_grad=True)
     return S,prob
 
 
