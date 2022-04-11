@@ -22,7 +22,7 @@ include("data.jl")
 export JacobianMatrix, calc_jacobian_matrix
 export calc_pth_jacobian, calc_qth_jacobian
 export calc_pv_jacobian, calc_qv_jacobian
-export calc_bus_idx_of_type,calc_bad_idx,calc_study_idx
+
 
 #Network data utilities
 export make_ami_dataset,make_timeseries_dataset,calc_finite_differences
@@ -36,5 +36,8 @@ export calc_vmag_condition
 
 #Matrix utilities
 export ispd,isnd,isnsd,isinvertible,symmetricdiff,symmetric_part_nd,symmetric_part_nsd,symmetric_part_pd
+
+#Bus idx utilities
+export calc_bus_idx_of_type,calc_bad_idx,calc_study_idx
 
 end
