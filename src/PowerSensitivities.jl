@@ -8,16 +8,17 @@ using SparseArrays
 using Flux
 PowerModels.silence()
 
+
+include("matrix_completion.jl")
+include("network.jl")
+include("data.jl")
 include("power_factor.jl")
 include("jacobian_matrix.jl")
 include("sens/voltage.jl")
 include("sens/angles.jl")
 include("util/matrix.jl")
 include("util/bus_index.jl")
-include("matrix_completion.jl")
-include("network.jl")
-include("data.jl")
-
+include("data/nr.jl")
 #Jacobian matrix utilities
 export JacobianMatrix, calc_jacobian_matrix
 export calc_pth_jacobian, calc_qth_jacobian
