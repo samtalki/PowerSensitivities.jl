@@ -17,9 +17,12 @@ end
 # ╔═╡ 8b2c4808-62fd-42a9-9f82-1d9bf7f304d0
 html"""<style>
 main {
-    max-width: 1900px;
+    max-width: 1000px;
 }
 """
+
+# ╔═╡ c1c0daa8-c632-4493-956d-d8e6ffd8080a
+case5 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
 
 # ╔═╡ 89ea0207-c19d-4448-a02b-d16d38b6aff5
 begin
@@ -43,23 +46,45 @@ end
 # ╔═╡ 6c187b3a-a13f-49fc-8acd-f4df10be683b
 begin
 	q(p::Real,pf::Real=0.95) = p.*tan.(acos.(pf))
+	q(pf::AbstractArray,p::Real) = k.(pf)*p
 	q(p) = k(pf(p,q(p))) .* p
 end
 
+# ╔═╡ ddcfa7d4-ff56-4835-8822-d2fb9fc622e9
+
+
 # ╔═╡ 35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
 begin
-	smax = 9
-	αmax = 0.9
-	αmin = 0.5
-	f(x,y) = x^2 + y^2 - smax
-	p(x,y) = 
-	r = (f ⩵ 0) # \Equal[tab]
-	
-	plot(r)
-	title!(L"\mathcal{S} = \{s = p + jq : \| s \| \leq c\}")
-	xlabel!("Active Power "*L"p")
-	ylabel!("Reactive Power "*L"q")
+	#Range of power factors
+	α = -1:0.001:1
+	ps = [0.5 1 5 15 50]
+	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5])]
+	capacitive = -1 .* data
+	labels = [string(p_i)*" kW" for p_i in ps]
+	#Inductive Plot
+	ind = plot(
+		α,
+		data,
+		ylims=(-100,100),
+		label=labels,
+		color=:auto,
+		legend_position=:bottomright,
+		legend_title="Active Power",
+		legend_title_font_pointsize=10,
+	)
+	# #Capacitive Pot
+	# cap = plot(α,
+	# 	capacitive,
+	# 	ylims=(-100,100),
+	# 	ls=:dash
+	# )
+	# plot(ind,cap,layout=(1,2))
+	title!(L"$q(\alpha_i) = k(\alpha_i)p_i = \frac{\sqrt{1-\alpha_i^2}}{\alpha_i} p_i$")
+	xlabel!("Power Factor "*L"\alpha_i")
+	ylabel!(L"Reactive Power $q_i$ (kVAR)")
+	savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_representation.pdf")
 end
+
 
 # ╔═╡ ac48dadf-533f-4178-b99b-b4d6395dc80d
 
@@ -1203,11 +1228,13 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╟─8b2c4808-62fd-42a9-9f82-1d9bf7f304d0
+# ╠═8b2c4808-62fd-42a9-9f82-1d9bf7f304d0
 # ╠═bf7c122a-a2e7-11ec-3063-0bcff1909553
+# ╠═c1c0daa8-c632-4493-956d-d8e6ffd8080a
 # ╠═89ea0207-c19d-4448-a02b-d16d38b6aff5
 # ╠═a40a7c3b-6a8a-4db6-bdd3-2c86a9fbb57b
 # ╠═6c187b3a-a13f-49fc-8acd-f4df10be683b
+# ╠═ddcfa7d4-ff56-4835-8822-d2fb9fc622e9
 # ╠═35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
 # ╠═ac48dadf-533f-4178-b99b-b4d6395dc80d
 # ╠═111218b9-05f9-47c4-9467-17f38fc4e012
