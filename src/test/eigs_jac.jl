@@ -65,6 +65,8 @@ sel_bus_types = [1] #The bus types to cosnider (PQ by default)
 #The maximum number of leading eigenvalues to show (will be less if the case has less buses than this divided by 2)
 case_names = readdir(network_data_path);
 paths = readdir(network_data_path,join=true);
+#Dictionary of minimum eigenvalues for each test case
+minimum_eig = Dict()
 for (case_name,case_path) in zip(case_names,paths)
     network = try
         make_basic_network(parse_file(case_path)); 
@@ -75,7 +77,6 @@ for (case_name,case_path) in zip(case_names,paths)
     if PowerSensitivities.is_radial(network) || allow_mesh
         #Calculate the eigenvalues of the jacobian and submatrices
         eigs_J,eigs_sub = calc_jacobian_eigvals(network,sel_bus_types)
-
         #Save as CSVs
         file_name = splitext(case_name)[1]
         CSV.write("src/test/results/eigs_jac/"*"J_"*file_name*".csv",eigs_J)
@@ -86,5 +87,8 @@ for (case_name,case_path) in zip(case_names,paths)
         J_matrix = Matrix(J.matrix)
         CSV.write("src/test/results/J_full/"*file_name*".csv",Tables.table(J_matrix),writeheader=false)
         
+        #Save minimum eigenvalues of the jacobian
+        minimum_eig[case_name] = minimum(real.(eigs_J[!,"J"]))
+
     end
 end
