@@ -4,17 +4,8 @@ include("../util/matrix.jl")
 import .PowerSensitivities
 using PowerModels: parse_file,make_basic_network
 using Plots, LaTeXStrings
+using LinearAlgebra
 theme(:ggplot2)
-
-#Test case path and parameters
-#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
-allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
-
-#Select networks to plot
-global study_network_names = ["case4_dist.m" "case15da.m" "case16ci.m" "case28da.m" "case34sa.m" "case69.m" "case136ma.m"]
-#Select maximum power factors to test
-global pf_max = 0.75:0.01:1
 
 """
 Given:
@@ -27,19 +18,19 @@ Compute:
 function calc_pf_min(network::Dict{String,<:Any},sel_bus_types=[1,2],pf_max::Real=1)
     #Compute the indeces that will be considered
     bad_idx = PowerSensitivities.calc_bad_idx(network)
-    study_idx = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
-    #study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
+    idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrices of interest
-    #K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
+    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
     ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
     ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
-    #k_max = maximum(diag(K))
-    #M = k_max*∂p∂θ - ∂q∂θ
-    M = PowerSensitivities.k(pf_max)*∂p∂θ - ∂q∂θ
+    k_max = maximum(diag(K))
+    M = k_max*∂p∂θ - ∂q∂θ
+    #M = PowerSensitivities.k(pf_max)*∂p∂θ - ∂q∂θ
     #Check the sizes
     @assert size(∂p∂θ,1) == length(study_idx) && size(∂p∂θ,2) == length(study_idx)
     @assert size(∂q∂θ,1) == length(study_idx) && size(∂q∂θ,2) == length(study_idx)
-    #@assert size(K,1) == length(study_idx) && size(K,2) == length(study_idx)
+    @assert size(K,1) == length(study_idx) && size(K,2) == length(study_idx)
     #Compute the bound on Δk
     if pf_max==1
         pf_min = PowerSensitivities.kinv(
@@ -83,6 +74,23 @@ function test_pf_min(sel_bus_types=[1,2],pf_max::Real=1,network_data_path=networ
     return pf_min
 end
 
+#Test case path and parameters
+network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
+#network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
+allow_mesh = true #Whether to allow meshed test cases/require test feeder is radial
+
+#Select networks to plot
+
+#Radial cases
+#global study_network_names = ["case4_dist.m" "case16ci.m" "case34sa.m" "case136ma.m"]
+
+#Mesh cases
+global study_network_names = ["case5.m" "case9.m" "case14.m" "case24.m"]
+
+
+#Select maximum power factors to test
+global pf_max = 0.75:0.005:1
+
 
 begin
     #Compute the minimum bus power factors at unity max power factor
@@ -97,20 +105,24 @@ begin
     end
     #Plot the minimum power factors
     plot(pf_max,pf_min_nonunity,
-        title="Minimum vs. Maximum Power Factor",
+        title="Feasible Power Factors "*L"\{\alpha : \alpha_{\rm min} \leq \alpha \leq 1\}"*" Given "*L"\alpha_{\rm max}",
         label=study_network_names,
-        lw=2,alpha=0.8,
+        fillrange=1,
+        fillalpha=0.15,
+        lw=3,alpha=0.6,
         linestyle=:dot,
         markershape=:square,
-        markersize=3,
-        markeralpha=0.25,
+        markersize=2,
+        markeralpha=0.3,
         xaxis=("Chosen "*L"\alpha_{\rm max}",font(pointsize=12)),
         yaxis=(L"\alpha_{\rm min} = k^{-1}(k(\alpha_{\rm max}) + \Delta k_{\rm max})",font(pointsize=11)),
         legend_position=:bottomleft,
-        dpi=300,
+        legend_font_pointsize=12
+        #dpi=300,
         #size=(floor(3.5*400),floor((3.5/1.61828)*400))
         )
-    savefig("figures/spring_22/pf_min.png")
+    savefig("figures/spring_22/mesh_pf_min_current_kmax.png")
+    savefig("figures/spring_22/mesh_pf_min_current_kmax.pdf")
 end
 
 
