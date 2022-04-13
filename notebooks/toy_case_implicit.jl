@@ -22,12 +22,11 @@ main {
 """
 
 # ╔═╡ c1c0daa8-c632-4493-956d-d8e6ffd8080a
-case5 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
+
 
 # ╔═╡ 89ea0207-c19d-4448-a02b-d16d38b6aff5
 begin
 	"""Expressions for power factor"""
-	pf(network::Dict{String,<:Any}) =  [abs(cos(θi)) for θi in angle.(calc_basic_bus_injection(network))]
 	pf(p,q) = abs.(p./(sqrt.(p.^2 .+ q.^2))) 
 	pf(p,q) = sqrt.(p.^2 .+ q.^2) > 0 ? cos.(atan.(q./p)) : NaN
 	pf(p,q) = sqrt.(p.^2 .+ q.^2) >0 ? cos.(angle.(p .+ q.*im)) : NaN
@@ -40,18 +39,21 @@ end
 begin
 	"""Generic and signed implicit representation of reactive power"""
 	k(pf) = sqrt.(1 .- pf.^2)./pf 
-	k(pf,q) = pf.>0 ? -sign.(q)*abs.(sqrt.(1 .- pf.^2)./pf) : NaN 
+	k(pf,q) = -sign.(q)*abs.(sqrt.(1 .- pf.^2)./pf) 
 end
 
 # ╔═╡ 6c187b3a-a13f-49fc-8acd-f4df10be683b
 begin
 	q(p::Real,pf::Real=0.95) = p.*tan.(acos.(pf))
 	q(pf::AbstractArray,p::Real) = k.(pf)*p
-	q(p) = k(pf(p,q(p))) .* p
 end
 
 # ╔═╡ ddcfa7d4-ff56-4835-8822-d2fb9fc622e9
-
+begin
+	q_inst = -5
+	dpf = p -> ForwardDiff.derivative(x -> pf(x,q_inst),p)
+	plot(dpf)
+end
 
 # ╔═╡ 35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
 begin
@@ -82,12 +84,20 @@ begin
 	title!(L"$q(\alpha_i) = k(\alpha_i)p_i = \frac{\sqrt{1-\alpha_i^2}}{\alpha_i} p_i$")
 	xlabel!("Power Factor "*L"\alpha_i")
 	ylabel!(L"Reactive Power $q_i$ (kVAR)")
-	savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_representation.pdf")
+	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_representation.pdf")
 end
 
 
 # ╔═╡ ac48dadf-533f-4178-b99b-b4d6395dc80d
-
+begin
+	function f(d::Dict,x)
+		return (d["y"]+x)^2*d["y"]
+	end
+	d_ = Dict("y" => 1)
+	fx = x -> f(d_,x)
+	df = x -> ForwardDiff.derivative(fx,x)
+	df(3)
+end
 
 # ╔═╡ 111218b9-05f9-47c4-9467-17f38fc4e012
 

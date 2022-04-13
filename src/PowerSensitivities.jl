@@ -11,7 +11,7 @@ PowerModels.silence()
 
 include("matrix_completion.jl")
 include("network.jl")
-include("data.jl")
+include("data/ami.jl")
 include("power_factor.jl")
 include("jacobian_matrix.jl")
 include("sens/voltage.jl")

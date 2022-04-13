@@ -5,6 +5,7 @@ using LinearAlgebra
 using Flux 
 using Flux.Losses: mse
 using Flux.Optimise: update!
+using Convex
 
 
 norm_nuc(X::Matrix) = sum(svdvals(X))
