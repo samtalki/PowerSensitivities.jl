@@ -1,4 +1,4 @@
 # PowerSensitivities.jl
-is software for measurement-based and differentiable modeling of electric power networks.
+measurement-based modeling of electric power networks.
 
 
