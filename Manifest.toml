@@ -1351,9 +1351,9 @@ uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
 
 [[deps.OpenDSSDirect]]
 deps = ["CEnum", "DocStringExtensions", "Libdl", "LinearAlgebra", "REPL", "SparseArrays", "Test"]
-git-tree-sha1 = "91950824222fc249c1eec4af1e4027a893f8477c"
+git-tree-sha1 = "f6e2d13b0781769ea66e7a7cafb88062244d8fd5"
 uuid = "a8b11937-1041-50f2-9818-136bb7a8fb06"
-version = "0.7.2"
+version = "0.7.3"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]

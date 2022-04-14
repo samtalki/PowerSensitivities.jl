@@ -1,7 +1,22 @@
 import PowerModels as PM
 import LinearAlgebra as LA
+
+
 """
-An AC Power Flow Solver from scratch. Only compatible with basic networks.
+Given complex voltage and powers, and an admittance matrix Y, calculate the power flow mismatch.
+"""
+function calc_basic_mismatch(V,S,Y)
+    # STEP 1: Compute mismatch and check convergence
+    Si = V .* conj(Y * V)
+    Δp, Δq = real(S - Si), imag(S - Si)
+    Δx = [Δp ; Δq]
+    return Δx
+end
+
+
+"""
+The Newton-Raphson Power Flow Algorithm from scratch. Only compatible with basic networks.
+Credit ccoffrin, et al.
 """
 function compute_basic_ac_pf!(data::Dict{String, Any})
     Y = PM.calc_basic_admittance_matrix(data)
@@ -12,23 +27,22 @@ function compute_basic_ac_pf!(data::Dict{String, Any})
     while itr < itr_max
 
         # STEP 1: Compute mismatch and check convergence
-        V = calc_differentiable_bus_voltage(data)
-        S = calc_differentiable_bus_injection(data)
-        Si = V .* conj(Y * V)
-        Δp, Δq = real(S - Si), imag(S - Si)
-        if LinearAlgebra.normInf([Δp; Δq]) < tol
+        V = PM.calc_basic_bus_voltage(data) #∈C
+        S = PM.calc_basic_bus_injection(data) #∈C
+        Δx = calc_basic_mismatch(V,S,Y)
+        if LinearAlgebra.normInf(Δx) < tol
             break
         end
-
+        
         # STEP 2 and 3: Compute the jacobian and update step
-        J = calc_differentiable_jacobian_matrix(data)
-        vph = J \ [Δp; Δq]
+        J = PM.calc_basic_jacobian_matrix(data)
+        vph = J \ Δx
 
         # STEP 4 and 5
         # update voltage variables
         data = update_voltage_state!(data,vph)
         # update power variables
-        data = update_injection_state!(data,[Δp; Δq])
+        data = update_injection_state!(data,Δx)
 
         # update iteration counter
         itr += 1
@@ -38,20 +52,12 @@ function compute_basic_ac_pf!(data::Dict{String, Any})
     end
 end
 
-"""
-
-"""
-function calc_basic_mismatch(data::Dict{String,Any})
-
-end
 
 """
 given a basic network data dict, returns a complex valued vector of bus voltage
 values in rectangular coordinates as they appear in the network data.
 """
 function calc_differentiable_bus_voltage(data::Dict{String,<:Any})
-
-
     b = [bus for (i,bus) in data["bus"] if bus["bus_type"] != 4]
     bus_ordered = sort(b, by=(x) -> x["index"])
 

@@ -18,7 +18,7 @@ include("sens/voltage.jl")
 include("sens/angles.jl")
 include("util/matrix.jl")
 include("util/bus_index.jl")
-include("data/nr.jl")
+
 #Jacobian matrix utilities
 export JacobianMatrix, calc_jacobian_matrix
 export calc_pth_jacobian, calc_qth_jacobian
