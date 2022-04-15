@@ -1,24 +1,24 @@
+###
+#Test Theorem 1 at the AC power flow solution.
+###
 include("../PowerSensitivities.jl")
 include("../util/matrix.jl")
 using PowerModels
 using LinearAlgebra
-import .PowerSensitivities
-
-
-#Test Theorem 1 at the AC power flow solution.
+import PowerSensitivities as PS
 
 """
 Given a network data dict, tests theorem 1 conditions
 """
 function test_thm1(network::Dict,sel_bus_types=[1],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
-    idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    bad_idx = PS.calc_bad_idx(network,ϵ)
+    idx_sel_bus_types = PS.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrices of interest
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
-    ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
-    ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
+    K = PS.calc_K_matrix(network)[study_idx,study_idx]
+    ∂p∂θ = PS.calc_pth_jacobian(network)[study_idx,study_idx]
+    ∂q∂θ = PS.calc_qth_jacobian(network)[study_idx,study_idx]
     #Check the sizes
     @assert size(∂p∂θ,1) == length(study_idx) && size(∂p∂θ,2) == length(study_idx)
     @assert size(∂q∂θ,1) == length(study_idx) && size(∂q∂θ,2) == length(study_idx)
@@ -33,18 +33,18 @@ end
 
 """
 Given a network data dict,
-Calculate RHS of inequality "Δk_max" with the option drop_bad_idx.
-If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx are discarded.
+Calculate RHS of inequality "Δk_max".
+Buses that meet the conditions in PowerSensitivities.calc_bad_idx are discarded.
 """
 function calc_Δk_bound(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
-    idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    bad_idx = PS.calc_bad_idx(network,ϵ)
+    idx_sel_bus_types = PS.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrices of interest
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
-    ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
-    ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
+    K = PS.calc_K_matrix(network)[study_idx,study_idx]
+    ∂p∂θ = PS.calc_pth_jacobian(network)[study_idx,study_idx]
+    ∂q∂θ = PS.calc_qth_jacobian(network)[study_idx,study_idx]
     k_max = maximum(diag(K))
     M = k_max*∂p∂θ - ∂q∂θ
     #Check the sizes
@@ -67,12 +67,12 @@ If drop_bad_idx==True, then the buses that meet the conditions in calc_bad_idx a
 """
 function calc_Δk_observed(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
-    idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    bad_idx = PS.calc_bad_idx(network,ϵ)
+    idx_sel_bus_types = PS.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrix K and the bus power factors
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
-    pf = PowerSensitivities.calc_basic_power_factor(network)[study_idx]
+    K = PS.calc_K_matrix(network)[study_idx,study_idx]
+    pf = PS.calc_basic_power_factor(network)[study_idx]
     #Check the sizes are consistent
     @assert size(K,1) == length(study_idx) && size(K,2) == length(study_idx)
     @assert length(pf) == length(study_idx) #Check sizes are consistent
@@ -100,14 +100,14 @@ Compute the maximum difference between nodal power factors so that complex power
 """
 function calc_thm1_data(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
     #Compute the indeces that will be considered
-    bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
-    idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)
+    bad_idx = PS.calc_bad_idx(network,ϵ)
+    idx_sel_bus_types = PS.calc_bus_idx_of_type(network,sel_bus_types)
     study_idx = [i for i in 1:length(network["bus"]) if((i ∉ bad_idx) && (i ∈ idx_sel_bus_types))]
     #Compute the matrices of interest
-    K = PowerSensitivities.calc_K_matrix(network)[study_idx,study_idx]
-    pf = PowerSensitivities.calc_basic_power_factor(network)[study_idx]
-    ∂p∂θ = PowerSensitivities.calc_pth_jacobian(network)[study_idx,study_idx]
-    ∂q∂θ = PowerSensitivities.calc_qth_jacobian(network)[study_idx,study_idx]
+    K = PS.calc_K_matrix(network)[study_idx,study_idx]
+    pf = PS.calc_basic_power_factor(network)[study_idx]
+    ∂p∂θ = PS.calc_pth_jacobian(network)[study_idx,study_idx]
+    ∂q∂θ = PS.calc_qth_jacobian(network)[study_idx,study_idx]
     k_max = maximum(diag(K))
     M = k_max*∂p∂θ - ∂q∂θ
     ΔK = k_max*I - K
@@ -129,7 +129,6 @@ end
 
 #Radial cases
 #Test case path and parameters
-#network_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
 network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
 allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
 names = readdir(network_data_path);
@@ -147,8 +146,12 @@ for (name,path) in zip(names,paths)
         println("PM cannot parse "*name)
         continue
     end
+    
+    ##Compute the AC power flow Solution
     compute_ac_pf!(network) ################################# Compute the AC power flow solution first!
-    if PowerSensitivities.is_radial(network) || allow_mesh
+    
+    
+    if PS.is_radial(network) || allow_mesh
         thm1_results[name] = test_thm1(network)
         thm1_weak_rhs[name] = calc_Δk_bound(network)
         thm1_weak_lhs[name] = calc_Δk_observed(network)
@@ -162,12 +165,8 @@ end
 n_cases_holds = sum([1 for (name,holds) in thm1_holds if holds])
 
 
-
-#Non-radial cases
-mesh_data_path="/home/sam/github/PowerSensitivities.jl/data/matpower/" #Folder with meshed and radial systems
-names = readdir(mesh_data_path);
-paths = readdir(mesh_data_path,join=true);
-
+#Test for non-radial cases
+allow_mesh = true #Whether to allow meshed test cases/require test feeder is radial
 #Results dicts
 mesh_thm1_results = Dict()
 mesh_thm1_results_pq_pv = Dict()
@@ -181,7 +180,11 @@ for (name,path) in zip(names,paths)
         println("PM cannot parse "*name)
         continue
     end
-    if !PowerSensitivities.is_radial(network) 
+
+     ##Compute the AC power flow Solution
+     compute_ac_pf!(network) ################################# Compute the AC power flow solution first!
+
+    if !PS.is_radial(network) 
         try
             mesh_thm1_results[name] = test_thm1(network)
             mesh_thm1_results_pq_pv[name] = test_thm1(network,[1,2])
