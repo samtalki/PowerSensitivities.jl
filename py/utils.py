@@ -1,12 +1,13 @@
 import numpy as np
 from numba import jit
 from measurements import constrained_linear_measurement_operator
-np.random.seed(2022)
 
-def make_deviations(data,sigma=0):
+
+def make_deviations(data,sigma=0,seed=2022):
     """
     Make finite difference data with noise level sigma
     """
+    np.random.seed(seed)
     p,q,v = data
     (dp,dq,dv) = [np.diff(x) for x in (p,q,v)]
     dx = np.vstack((dp,dq)) 

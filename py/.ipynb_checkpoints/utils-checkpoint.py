@@ -1,6 +1,19 @@
 import numpy as np
 from numba import jit
 from measurements import constrained_linear_measurement_operator
+np.random.seed(2022)
+
+def make_deviations(data,sigma=0):
+    """
+    Make finite difference data with noise level sigma
+    """
+    p,q,v = data
+    (dp,dq,dv) = [np.diff(x) for x in (p,q,v)]
+    dx = np.vstack((dp,dq)) 
+    return (
+        dx + np.random.normal(0,sigma,size=dx.shape),
+        dv + np.random.normal(0,sigma,size=dv.shape)
+        )
 
 def make_sens_ts(dvdp,dvdq,n=274):
     """Make timeseries of sensitivity matrices"""
@@ -13,13 +26,6 @@ def make_sens_ts(dvdp,dvdq,n=274):
         svq.append(dvdq[t*n:(t+1)*n,:])
     return {'svp':svp,
             'svq':svq}
-
-def make_deviations(data):
-    """Make finite differences"""
-    p,q,v = data
-    (dp,dq,dv) = [np.diff(x) for x in (p,q,v)]
-    dx = np.vstack((dp,dq))
-    return (dx,dv)
 
 def make_S_tilde(svp,svq):
     """Make wide S_tilde matrix"""
@@ -43,6 +49,17 @@ def spectral_analysis(S):
 def calc_vector_rel_err(v_est,v_true):
     """computes the relative error of v_est to v_true"""
     return np.linalg.norm(v_est-v_true)/np.linalg.norm(v_true)
+
+@jit
+def calc_vector_rel_err_ts(V_est,V_true):
+    """
+    Computes a relative error timeseries
+    Given matrices V_est, V_true whose columsn are state vectors
+    """
+    rel_err_ts = []
+    for t,(hat_v_t,v_t) in enumerate(zip(V_est.T,V_true.T)):
+        rel_err_ts.append(calc_vector_rel_err(hat_v_t,v_t))
+    return np.array(rel_err_ts)
 
 @jit
 def calc_vector_rmse(yhat,y):
