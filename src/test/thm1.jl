@@ -181,6 +181,8 @@ function calc_thm1_data(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
     k_max = maximum(diag(K))
     M = k_max*∂p∂θ - ∂q∂θ
     ΔK = k_max*I - K
+    #Compute the net bus injection vector
+    bus_injection = calc_basic_bus_injection(network)[study_idx]
     #Check the sizes
     @assert size(∂p∂θ,1) == length(study_idx) && size(∂p∂θ,2) == length(study_idx)
     @assert size(∂q∂θ,1) == length(study_idx) && size(∂q∂θ,2) == length(study_idx)
@@ -194,6 +196,7 @@ function calc_thm1_data(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
         "spth" => ∂p∂θ,
         "sqth" => ∂q∂θ,
         "pf" => pf,
+        "bus_injection"=>bus_injection,
         "study_idx"=> study_idx)
 end
 
@@ -210,6 +213,8 @@ function calc_thm1_data_study_idx(network::Dict{String,<:Any},study_idx::Abstrac
     k_max = maximum(diag(K))
     M = k_max*∂p∂θ - ∂q∂θ
     ΔK = k_max*I - K
+    #Compute the net bus injection vector
+    bus_injection = calc_basic_bus_injection(network)[study_idx]
     #Check the sizes
     @assert size(∂p∂θ,1) == length(study_idx) && size(∂p∂θ,2) == length(study_idx)
     @assert size(∂q∂θ,1) == length(study_idx) && size(∂q∂θ,2) == length(study_idx)
@@ -223,6 +228,7 @@ function calc_thm1_data_study_idx(network::Dict{String,<:Any},study_idx::Abstrac
         "spth" => ∂p∂θ,
         "sqth" => ∂q∂θ,
         "pf" => pf,
+        "bus_injection"=>bus_injection,
         "study_idx"=> study_idx)
 end
 
