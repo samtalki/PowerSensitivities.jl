@@ -1,4 +1,4 @@
-#Compute the eigenvalues of all of the Jacobians
+#Compute the eigenvalues of all of the Jacobians at the AC power flow solutions
 include("../PowerSensitivities.jl")
 using .PowerSensitivities
 using PowerModels:make_basic_network,parse_file
@@ -16,8 +16,8 @@ function calc_jacobian_eigvals(network::Dict,sel_bus_types=[1],ϵ=1e-6)
     study_idx = calc_bus_idx_of_type(network,sel_bus_types)
     
     #Study_idx
-    n_bus,n_study_bus = length(network["bus"]),length(study_idx)
-    jac_study_idx = [study_idx; study_idx .+ n_bus]
+    n_total_bus,n_study_bus = length(network["bus"]),length(study_idx)
+    jac_study_idx = [study_idx; study_idx .+ n_total_bus]
     
     #Compute the matrices of interest
     J = calc_jacobian_matrix(network)
@@ -44,19 +44,6 @@ function calc_jacobian_eigvals(network::Dict,sel_bus_types=[1],ϵ=1e-6)
     return DataFrame(eigs_J),DataFrame(eigs_submatrices)
 end
 
-"""
-Given a network data dict calculate the jacobain matrix as a DataFrame.
-"""
-function calc_jacobian_df(network::Dict,sel_bus_types=[1])
-    #Calculate full Jacobian
-    J = calc_jacobian_matrix(network,sel_bus_types)
-    J_matrix = Matrix(J.matrix)
-    #cols = [J_j for J_j in eachcol(J_matrix)]
-    #bus_names = vcat(["bus_"*string(idx) for idx in 1:size(J_matrix,1)/2], ["bus_"*string(idx) for idx in 1:size(J_matrix,1)/2])
-    #J_df = DataFrame(columns=cols,names=bus_names)
-    return J_df
-end
-
 #Compute the leading eigenvalues for every test case
 #Folder with Test case systems
 network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" 
@@ -66,7 +53,7 @@ sel_bus_types = [1] #The bus types to cosnider (PQ by default)
 case_names = readdir(network_data_path);
 paths = readdir(network_data_path,join=true);
 #Dictionary of minimum eigenvalues for each test case
-minimum_eig = Dict()
+radial_minimum_eig = Dict()
 for (case_name,case_path) in zip(case_names,paths)
     network = try
         make_basic_network(parse_file(case_path)); 
@@ -85,10 +72,57 @@ for (case_name,case_path) in zip(case_names,paths)
         #Calculate full jacobian dataframe and save as csv
         J = calc_jacobian_matrix(network,sel_bus_types)
         J_matrix = Matrix(J.matrix)
-        CSV.write("src/test/results/J_full/"*file_name*".csv",Tables.table(J_matrix),writeheader=false)
+        CSV.write("src/test/results/radial/J_full/"*file_name*".csv",Tables.table(J_matrix),writeheader=false)
         
         #Save minimum eigenvalues of the jacobian
-        minimum_eig[case_name] = minimum(real.(eigs_J[!,"J"]))
+        radial_minimum_eig[case_name] = minimum(real.(eigs_J[!,"J"]))
 
     end
 end
+
+#Test for non-radial cases
+####
+allow_mesh = true #Whether to allow meshed test cases/require test feeder is radial
+network_data_path = "/home/sam/github/PowerSensitivities.jl/data/pm_matpower/" 
+case_names = readdir(network_data_path);
+paths = readdir(network_data_path,join=true);
+#Dictionary of minimum eigenvalues for each test case
+mesh_minimum_eig = Dict()
+for (case_name,case_path) in zip(case_names,paths)
+    network = try
+        make_basic_network(parse_file(case_path)); 
+    catch
+        println("PM cannot parse "*case_name)
+        continue
+    end
+    if PowerSensitivities.is_radial(network) || allow_mesh
+        #Calculate the eigenvalues of the jacobian and submatrices
+        eigs_J,eigs_sub = calc_jacobian_eigvals(network,sel_bus_types)
+        #Save as CSVs
+        file_name = splitext(case_name)[1]
+        CSV.write("src/test/results/eigs_jac/"*"J_"*file_name*".csv",eigs_J)
+        CSV.write("src/test/results/eigs_jac/"*"sub_"*file_name*".csv",eigs_sub)
+
+        #Calculate full jacobian dataframe and save as csv
+        J = calc_jacobian_matrix(network,sel_bus_types)
+        J_matrix = Matrix(J.matrix)
+        CSV.write("src/test/results/mesh/J_full/"*file_name*".csv",Tables.table(J_matrix),writeheader=false)
+        
+        #Save minimum eigenvalues of the jacobian
+        mesh_minimum_eig[case_name] = minimum(real.(eigs_J[!,"J"]))
+
+    end
+end
+
+# """
+# Given a network data dict calculate the jacobain matrix as a DataFrame.
+# """
+# function calc_jacobian_df(network::Dict,sel_bus_types=[1])
+#     #Calculate full Jacobian
+#     J = calc_jacobian_matrix(network,sel_bus_types)
+#     J_matrix = Matrix(J.matrix)
+#     #cols = [J_j for J_j in eachcol(J_matrix)]
+#     #bus_names = vcat(["bus_"*string(idx) for idx in 1:size(J_matrix,1)/2], ["bus_"*string(idx) for idx in 1:size(J_matrix,1)/2])
+#     #J_df = DataFrame(columns=cols,names=bus_names)
+#     return J_df
+# end
