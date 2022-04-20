@@ -3,17 +3,17 @@ Given a network data dict, calculate the "bad indeces" that do not satisfy the a
 """
 function calc_bad_idx(data::Dict{String,<:Any},ϵ=1e-6)
     s = calc_basic_bus_injection(data);
-    p,q,pf = real.(s),imag.(s),calc_basic_power_factor(data) 
-    bad_idx = [] #Array of indeces with zero p or zero MVA injections to be discarded
+    pnet,qnet,pf = real.(s),imag.(s),calc_basic_power_factor(data) 
+    bad_idx = [] #Array of indeces with zero pnet or zero MVA injections to be discarded
     for (i,pf_i) in enumerate(pf)
         #Ignore buses with zero power injection
-        if abs(p[i]) ≤ ϵ && abs(q[i]) ≤ ϵ 
+        if abs(pnet[i]) ≤ ϵ && abs(qnet[i]) ≤ ϵ 
             push!(bad_idx,i)
         #Ignore buses with zero power factor
-        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || p[i] == 0.0
+        elseif abs(pf_i) <= 1e-5 || pf_i == NaN || pnet[i] == 0.0
             push!(bad_idx,i) #K[i,i] = 0
         #Ignore buses with capacitive injections
-        elseif q[i] > 0 
+        elseif qnet[i] > 0 
            push!(bad_idx,i)
         else
             continue
@@ -38,6 +38,40 @@ function calc_study_idx(data::Dict{String,<:Any},sel_bus_types=[1,2],ϵ=1e-6)
     idx_good_bus = [i for i in 1:n_bus if i ∉ calc_bad_idx(data,ϵ)]
     #Compute the indeces that are of the selected type and satify all of the assumptions.
     return [i for i in 1:n_bus if i ∈ idx_good_bus || i ∈ idx_sel_bus_types]
+end
+
+"""
+Given a network data dict, calculate the indeces that are net-inductive
+"""
+function calc_net_inductive_idx(data::Dict{String,<:Any},ϵ=1e-6)
+    s = calc_basic_bus_injection(data);
+    pnet,qnet = real.(s),imag.(s)
+    inductive_idx = [] #Array of indeces with inductive net injections
+    for (i,qᵢ) in enumerate(qnet)
+        if qᵢ < 0 
+           push!(inductive_idx,i)
+        else
+            continue
+        end
+    end
+    return inductive_idx
+end
+
+"""
+Given a network data dict, calculate the indeces that are net-inductive
+"""
+function calc_net_capacitive_idx(data::Dict{String,<:Any},ϵ=1e-6)
+    s = calc_basic_bus_injection(data);
+    pnet,qnet = real.(s),imag.(s)
+    capacitive_idx = [] #Array of indeces with inductive net injections
+    for (i,qᵢ) in enumerate(qnet)
+        if qᵢ > 0 
+           push!(capacitive_idx,i)
+        else
+            continue
+        end
+    end
+    return capacitive_idx
 end
 
 
