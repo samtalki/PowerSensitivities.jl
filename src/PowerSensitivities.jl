@@ -20,7 +20,7 @@ include("util/matrix.jl")
 include("util/bus_index.jl")
 
 #Jacobian matrix utilities
-export JacobianMatrix, calc_jacobian_matrix
+export PowerFlowJacobian, calc_jacobian_matrix
 export calc_pth_jacobian, calc_qth_jacobian
 export calc_pv_jacobian, calc_qv_jacobian
 

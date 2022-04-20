@@ -16,11 +16,13 @@ network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #
 names = readdir(network_data_path);
 paths = readdir(network_data_path,join=true);
 
-#Results dicts
-thm1_results = Dict()
-thm1_weak_rhs = Dict()
-thm1_weak_lhs = Dict()
-thm1_data = Dict()
+#Results dicts for automatic indexing.
+#PQ bus only, unsuitable indexes removed.
+radial_thm1_results = Dict()
+radial_thm1_weak_rhs = Dict()
+radial_thm1_weak_lhs = Dict()
+radial_thm1_data = Dict()
+radial_network_dicts = Dict() #Save PowerModels networks
 for (name,path) in zip(names,paths)
     network =  try
         make_basic_network(parse_file(path));
@@ -36,15 +38,16 @@ for (name,path) in zip(names,paths)
             continue
         end
         try
-            thm1_results[name] = test_thm1(network)
-            thm1_weak_rhs[name] = calc_Δk_bound(network)
-            thm1_weak_lhs[name] = calc_Δk_observed(network)
-            thm1_data[name] = calc_thm1_data(network)
+            radial_thm1_results[name] = test_thm1(network)
+            radial_thm1_weak_rhs[name] = calc_Δk_bound(network)
+            radial_thm1_weak_lhs[name] = calc_Δk_observed(network)
+            radial_thm1_data[name] = calc_thm1_data(network)
+            radial_network_dicts[name] = network
         catch
-            thm1_results[name] = nothing
-            thm1_weak_rhs[name] = nothing
-            thm1_weak_lhs[name] = nothing
-            thm1_data[name] = nothing
+            radial_thm1_results[name] = nothing
+            radial_thm1_weak_rhs[name] = nothing
+            radial_thm1_weak_lhs[name] = nothing
+            radial_thm1_data[name] = nothing
         end
     end
 end
@@ -58,6 +61,7 @@ mesh_thm1_results_pq_pv = Dict()
 mesh_thm1_weak_rhs = Dict()
 mesh_thm1_weak_lhs = Dict()
 mesh_thm1_data = Dict()
+mesh_network_dicts = Dict() #Save PowerModels networks
 for (name,path) in zip(names,paths)
     network =  try
         make_basic_network(parse_file(path));
@@ -78,6 +82,7 @@ for (name,path) in zip(names,paths)
             mesh_thm1_weak_rhs[name] = calc_Δk_bound(network)
             mesh_thm1_weak_lhs[name] = calc_Δk_observed(network)
             mesh_thm1_data[name] = calc_thm1_data(network)
+            mesh_network_dicts[name] = network
         catch
             continue
         end
@@ -88,7 +93,7 @@ end
 
 #Check where theorem 1 holds
 radial_thm1_holds = Dict()
-for (name,data) in thm1_data
+for (name,data) in radial_thm1_data
     radial_thm1_holds[name] = try 
         data["holds"]
     catch
@@ -105,5 +110,5 @@ for (name,data) in mesh_thm1_data
     end
 end
 
-n_radial_cases_holds = sum([1 for (name,holds) in radial_thm1_holds if holds])
-n_mesh_cases_holds = sum([1 for (name,holds) in mesh_thm1_holds if holds])
+radial_n_cases_holds = sum([1 for (name,holds) in radial_thm1_holds if holds])
+mesh_n_cases_holds = sum([1 for (name,holds) in mesh_thm1_holds if holds])

@@ -47,7 +47,6 @@ end
 #Compute the leading eigenvalues for every test case
 #Folder with Test case systems
 network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" 
-allow_mesh = false #Whether to allow meshed test cases/require test feeder is radial
 sel_bus_types = [1] #The bus types to cosnider (PQ by default)
 #The maximum number of leading eigenvalues to show (will be less if the case has less buses than this divided by 2)
 case_names = readdir(network_data_path);
@@ -61,22 +60,34 @@ for (case_name,case_path) in zip(case_names,paths)
         println("PM cannot parse "*case_name)
         continue
     end
-    if PowerSensitivities.is_radial(network) || allow_mesh
+    if PowerSensitivities.is_radial(network)
+
+        try  ### Compute the AC power flow solution first!
+            compute_ac_pf!(network)  
+        catch
+            println("AC Power Flow solution failed for: ",case_name)
+            continue
+        end
         #Calculate the eigenvalues of the jacobian and submatrices
         eigs_J,eigs_sub = calc_jacobian_eigvals(network,sel_bus_types)
         #Save as CSVs
         file_name = splitext(case_name)[1]
-        CSV.write("src/test/results/eigs_jac/"*"J_"*file_name*".csv",eigs_J)
-        CSV.write("src/test/results/eigs_jac/"*"sub_"*file_name*".csv",eigs_sub)
+        CSV.write("src/test/results/radial/eigs_jac/"*"J_"*file_name*".csv",eigs_J)
+        CSV.write("src/test/results/radial/eigs_jac/"*"sub_"*file_name*".csv",eigs_sub)
 
         #Calculate full jacobian dataframe and save as csv
-        J = calc_jacobian_matrix(network,sel_bus_types)
+        J = try
+            calc_jacobian_matrix(network,sel_bus_types)
+        catch
+            J = nothing
+            println("Eigenvalue analysis falied for case: ",case_name)
+            continue
+        end
         J_matrix = Matrix(J.matrix)
         CSV.write("src/test/results/radial/J_full/"*file_name*".csv",Tables.table(J_matrix),writeheader=false)
         
         #Save minimum eigenvalues of the jacobian
         radial_minimum_eig[case_name] = minimum(real.(eigs_J[!,"J"]))
-
     end
 end
 
@@ -86,6 +97,7 @@ allow_mesh = true #Whether to allow meshed test cases/require test feeder is rad
 network_data_path = "/home/sam/github/PowerSensitivities.jl/data/pm_matpower/" 
 case_names = readdir(network_data_path);
 paths = readdir(network_data_path,join=true);
+sel_bus_types = [1,2] #The bus types to cosnider (PQ by default)
 #Dictionary of minimum eigenvalues for each test case
 mesh_minimum_eig = Dict()
 for (case_name,case_path) in zip(case_names,paths)
@@ -95,22 +107,35 @@ for (case_name,case_path) in zip(case_names,paths)
         println("PM cannot parse "*case_name)
         continue
     end
-    if PowerSensitivities.is_radial(network) || allow_mesh
+    if !PowerSensitivities.is_radial(network)
+        try  ### Compute the AC power flow solution first!
+            compute_ac_pf!(network)  
+        catch
+            println("AC Power Flow solution failed for: ",case_name)
+            continue
+        end
+        
         #Calculate the eigenvalues of the jacobian and submatrices
         eigs_J,eigs_sub = calc_jacobian_eigvals(network,sel_bus_types)
         #Save as CSVs
         file_name = splitext(case_name)[1]
-        CSV.write("src/test/results/eigs_jac/"*"J_"*file_name*".csv",eigs_J)
-        CSV.write("src/test/results/eigs_jac/"*"sub_"*file_name*".csv",eigs_sub)
+        CSV.write("src/test/results/mesh/eigs_jac/"*"J_"*file_name*".csv",eigs_J)
+        CSV.write("src/test/results/mesh/eigs_jac/"*"sub_"*file_name*".csv",eigs_sub)
 
         #Calculate full jacobian dataframe and save as csv
-        J = calc_jacobian_matrix(network,sel_bus_types)
+        J = try
+            calc_jacobian_matrix(network,sel_bus_types)
+        catch
+            J= nothing
+            println("Eigenvalue analysis failed for case: ",case_name)
+            continue
+        end
         J_matrix = Matrix(J.matrix)
         CSV.write("src/test/results/mesh/J_full/"*file_name*".csv",Tables.table(J_matrix),writeheader=false)
         
         #Save minimum eigenvalues of the jacobian
         mesh_minimum_eig[case_name] = minimum(real.(eigs_J[!,"J"]))
-
+    
     end
 end
 

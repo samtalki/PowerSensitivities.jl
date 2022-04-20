@@ -1,5 +1,8 @@
-#Test theorem 1 while allowing non-inducitve injections
+###
+#Algorithms for testing Theorem 1 while allowing for non-inductive injections.
+###
 include("../PowerSensitivities.jl")
+include("../test/thm1.jl")
 include("../util/matrix.jl")
 using PowerModels
 using LinearAlgebra
