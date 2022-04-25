@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.4
+# v0.19.2
 
 using Markdown
 using InteractiveUtils
@@ -16,9 +16,6 @@ begin
 	using DataFrames
 	using Gadfly
 end
-
-# ╔═╡ b8d2050e-9bdb-43cc-8c2b-22c80a3b236a
-pwd()
 
 # ╔═╡ dfb0816c-aeda-4124-957a-f439fe8dde28
 function plot_matrix(M)
@@ -86,6 +83,18 @@ function calc_jacobian_matrix(data::Dict{String,<:Any},sel_bus_types=1)
     return JacobianMatrix(idx_to_bus,bus_to_idx,J,spth,sqth,spv,sqv)
 end
 
+# ╔═╡ 24193ad5-8e28-4351-bcc7-ebe902b9b8a7
+begin
+	#Load network data
+	data = make_basic_network(parse_file("data/radial_test/case4_dist.m"))
+	Y = calc_admittance_matrix(data)
+	J = calc_jacobian_matrix(data,1)
+	vm,q = abs.(calc_basic_bus_voltage(data)),imag(calc_basic_bus_injection(data))
+end
+
+# ╔═╡ 88ad817d-5292-44f7-ba65-8e36163d4780
+idx = get_idx_bus_types(data,[1])
+
 # ╔═╡ 8c1e987a-8124-4a46-a89c-ef31aeba4f32
 """
 Calculate ∂p/∂θ block of the power flow Jacobian given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v.
@@ -140,19 +149,6 @@ function calc_sqth_jacobian_block(network_data::Dict{String,<:Any},sel_bus_types
     vm,p = abs.(calc_basic_bus_voltage(network_data))[idx_bus_types],real(calc_basic_bus_injection(network_data))[idx_bus_types]
     return calc_sqth_jacobian_block(J.spv,vm,p)
 end
-
-# ╔═╡ 24193ad5-8e28-4351-bcc7-ebe902b9b8a7
-begin
-	#Load network data
-	data = parse_file("data/matpower/case14.m")
-	data = make_basic_network(data)
-	Y = calc_admittance_matrix(data)
-	J = calc_jacobian_matrix(data,1)
-	vm,q = abs.(calc_basic_bus_voltage(data)),imag(calc_basic_bus_injection(data))
-end
-
-# ╔═╡ 88ad817d-5292-44f7-ba65-8e36163d4780
-idx = get_idx_bus_types(data,[1])
 
 # ╔═╡ b390b38c-e5ae-4f4b-bfdb-ed54dcad1582
 function find_bus_of_type(network,sel_bus_types)
@@ -1270,7 +1266,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 
 # ╔═╡ Cell order:
 # ╠═3a02936c-9fcc-11ec-2bee-270c8626402c
-# ╠═b8d2050e-9bdb-43cc-8c2b-22c80a3b236a
+# ╠═24193ad5-8e28-4351-bcc7-ebe902b9b8a7
 # ╠═dfb0816c-aeda-4124-957a-f439fe8dde28
 # ╠═436a43d6-4d70-4eba-9f29-b198f4ba9ebe
 # ╠═cc904d3d-d426-4da0-81ac-052fb021d262
@@ -1282,7 +1278,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═9a66a455-aeb0-4e18-b50b-5945227b3e63
 # ╠═b4236c4e-cd36-4d77-900b-c4538ae4dc59
 # ╠═738f2979-c6a2-4c0d-9339-d7143164b511
-# ╠═24193ad5-8e28-4351-bcc7-ebe902b9b8a7
 # ╠═b390b38c-e5ae-4f4b-bfdb-ed54dcad1582
 # ╠═251026c2-d8ba-444b-94e8-10b6eb8c7afe
 # ╠═b76bc7d2-3d31-41a4-8ece-e07ef187f99c

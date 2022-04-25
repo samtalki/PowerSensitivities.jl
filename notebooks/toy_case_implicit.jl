@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.0
+# v0.19.2
 
 using Markdown
 using InteractiveUtils
@@ -30,9 +30,9 @@ begin
 	pf(p,q) = abs.(p./(sqrt.(p.^2 .+ q.^2))) 
 	pf(p,q) = sqrt.(p.^2 .+ q.^2) > 0 ? cos.(atan.(q./p)) : NaN
 	pf(p,q) = sqrt.(p.^2 .+ q.^2) >0 ? cos.(angle.(p .+ q.*im)) : NaN
-	pf(s::Complex) = norm.(s) .> 0 ? real.(s)./norm.(s) : NaN
-	pf(s::Complex) = norm.(s) .> 0 ? cos.(atan.(imag.(s)./real.(s))) : NaN
-	pf(s::Complex) = norm.(s) .> 0 ? cos.(angle.(s)) : NaN
+	pf(s) = abs.(s) .> 0 ? real.(s)./abs.(s) : NaN
+	pf(s) = abs.(s) .> 0 ? cos.(atan.(imag.(s)./real.(s))) : NaN
+	pf(s) = abs.(s) .> 0 ? cos.(angle.(s)) : NaN
 end
 
 # ╔═╡ a40a7c3b-6a8a-4db6-bdd3-2c86a9fbb57b
@@ -55,36 +55,67 @@ begin
 	plot(dpf)
 end
 
+# ╔═╡ ea33e997-0ec4-451f-af77-450fd12a382c
+
+
 # ╔═╡ 35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
 begin
 	#Range of power factors
 	α = -1:0.001:1
-	ps = [0.5 1 5 15 50]
+	ps = [0.5 1 5 15 30 50]
 	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5])]
 	capacitive = -1 .* data
-	labels = [string(p_i)*" kW" for p_i in ps]
+	labels = [string(p_i) for p_i in ps]
 	#Inductive Plot
 	ind = plot(
 		α,
 		data,
 		ylims=(-100,100),
 		label=labels,
-		color=:auto,
+		color=[2 3 4 5 6],
+		color_palette = palette(:dense, 7),
 		legend_position=:bottomright,
-		legend_title="Active Power",
-		legend_title_font_pointsize=10,
+		legend_title=L"$p_i$ (kW)",
+		legend_title_font_pointsize=9,
+		ylabel=L"Reactive Power $q_i$ (kVAR)",
+		title = L"$q(\alpha_i) = k(\alpha_i) p_i$"
 	)
 	# #Capacitive Pot
-	# cap = plot(α,
-	# 	capacitive,
-	# 	ylims=(-100,100),
-	# 	ls=:dash
-	# )
-	# plot(ind,cap,layout=(1,2))
-	title!(L"$q(\alpha_i) = k(\alpha_i)p_i = \frac{\sqrt{1-\alpha_i^2}}{\alpha_i} p_i$")
+	cap = plot(α,
+		capacitive,
+		ylims=(-100,100),
+		ls=:dash,
+		legend_position=:bottomleft,
+		color=[2 3 4 5 6],
+		color_palette = palette(:dense, 7),
+		labels=labels,
+		legend_title=L"$p_i$ (kW)",
+		legend_title_font_pointsize=9,
+		title = L"$q(\alpha_i) = -k(\alpha_i) p_i$",
+	)
+	
+	plot(ind,cap)
+	#title!(L"$q(\alpha_i) = k(\alpha_i)p_i = \frac{\sqrt{1-\alpha_i^2}}{\alpha_i} p_i$")
 	xlabel!("Power Factor "*L"\alpha_i")
-	ylabel!(L"Reactive Power $q_i$ (kVAR)")
-	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_representation.pdf")
+	#ylabel!(L"Reactive Power $q_i$ (kVAR)")
+	savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_representation_cap_ind.pdf")
+end
+
+
+# ╔═╡ f5394f0b-f02e-4251-8f4e-f1099f9c4e52
+Plots.color()
+
+# ╔═╡ 28c24fd0-1375-4763-856f-fab3c496ea86
+begin
+	#Reactive power functions
+	q_signed(pf,p) = 
+	pfs = -1:0.001:1
+	plot([q_ind,q_cap],pfs)
+	for p in ps
+		p=p
+		plot([q_ind,q_cap],pfs)
+	end
+
 end
 
 
@@ -138,7 +169,7 @@ PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 ForwardDiff = "~0.10.25"
 ImplicitEquations = "~1.0.7"
 LaTeXStrings = "~1.3.0"
-Plots = "~1.27.5"
+Plots = "~1.27.6"
 PowerModels = "~0.19.5"
 """
 
@@ -276,9 +307,9 @@ uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.5.7"
 
 [[deps.DataAPI]]
-git-tree-sha1 = "cc70b17275652eb47bc9e5f81635981f13cea5c8"
+git-tree-sha1 = "fb5f5316dd3fd4c5e7c30a24d50643b73e37cd40"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
-version = "1.9.0"
+version = "1.10.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -813,9 +844,9 @@ version = "1.2.0"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs", "UnicodeFun", "Unzip"]
-git-tree-sha1 = "88ee01b02fba3c771ac4dce0dfc4ecf0cb6fb772"
+git-tree-sha1 = "6f2dd1cf7a4bbf4f305a0d8750e351cb46dfbe80"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.27.5"
+version = "1.27.6"
 
 [[deps.PowerModels]]
 deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "Memento", "NLsolve", "SparseArrays"]
@@ -839,9 +870,9 @@ uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 
 [[deps.Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "ad368663a5e20dbb8d6dc2fddeefe4dae0781ae8"
+git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+0"
+version = "5.15.3+1"
 
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
@@ -1245,7 +1276,10 @@ version = "0.9.1+5"
 # ╠═a40a7c3b-6a8a-4db6-bdd3-2c86a9fbb57b
 # ╠═6c187b3a-a13f-49fc-8acd-f4df10be683b
 # ╠═ddcfa7d4-ff56-4835-8822-d2fb9fc622e9
+# ╠═ea33e997-0ec4-451f-af77-450fd12a382c
 # ╠═35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
+# ╠═f5394f0b-f02e-4251-8f4e-f1099f9c4e52
+# ╠═28c24fd0-1375-4763-856f-fab3c496ea86
 # ╠═ac48dadf-533f-4178-b99b-b4d6395dc80d
 # ╠═111218b9-05f9-47c4-9467-17f38fc4e012
 # ╠═cfa65d4d-ac3d-4373-916a-5050fec59ce2
