@@ -1,0 +1,48 @@
+Clear
+
+New Circuit.ThreePhaseTestCircuit pu=1.05 bus1=BusSource basekv=12 R1=0.000001 X1=0.000001 R0=0.000001 X0=0.000001
+New Line.SSswitch bus1=BusSource bus2=BusPrim1 length=1 phases=3 r1=0.2 x1=0.2 r0=0.1 x0=0.1 c1=10 normamps=1500 units=m enabled=TRUE
+New Loadshape.load1_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load1_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load1_1_Q.dbl] UseActual=yes
+New Loadshape.load1_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load1_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load1_2_Q.dbl] UseActual=yes
+New Loadshape.load1_3 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load1_3_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load1_3_Q.dbl] UseActual=yes
+New Loadshape.load1_4 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load1_4_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load1_4_Q.dbl] UseActual=yes
+New Loadshape.load1_5 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load1_5_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load1_5_Q.dbl] UseActual=yes
+New Loadshape.load2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load2_Q.dbl] UseActual=yes
+New Loadshape.load3_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load3_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load3_1_Q.dbl] UseActual=yes
+New Loadshape.load3_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load3_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load3_2_Q.dbl] UseActual=yes
+New Loadshape.load3_3 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load3_3_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load3_3_Q.dbl] UseActual=yes
+New Loadshape.load3_4 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load3_4_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load3_4_Q.dbl] UseActual=yes
+New Loadshape.load3_5 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load3_5_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load3_5_Q.dbl] UseActual=yes
+New Loadshape.load4_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load4_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load4_1_Q.dbl] UseActual=yes
+New Loadshape.load4_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load4_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load4_2_Q.dbl] UseActual=yes
+New Loadshape.load4_3 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load4_3_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load4_3_Q.dbl] UseActual=yes
+New Loadshape.load4_4 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load4_4_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load4_4_Q.dbl] UseActual=yes
+New Loadshape.load4_5 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load4_5_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load4_5_Q.dbl] UseActual=yes
+New Loadshape.load5_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load5_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load5_1_Q.dbl] UseActual=yes
+New Loadshape.load5_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load5_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load5_2_Q.dbl] UseActual=yes
+New Loadshape.load5_3 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load5_3_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load5_3_Q.dbl] UseActual=yes
+New Loadshape.load5_4 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load5_4_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load5_4_Q.dbl] UseActual=yes
+New Loadshape.load6_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load6_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load6_1_Q.dbl] UseActual=yes
+New Loadshape.load6_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load6_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load6_2_Q.dbl] UseActual=yes
+New Loadshape.load6_3 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load6_3_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load6_3_Q.dbl] UseActual=yes
+New Loadshape.load6_4 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load6_4_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load6_4_Q.dbl] UseActual=yes
+New Loadshape.load7_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load7_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load7_1_Q.dbl] UseActual=yes
+New Loadshape.load7_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load7_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load7_2_Q.dbl] UseActual=yes
+New Loadshape.load7_3 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load7_3_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load7_3_Q.dbl] UseActual=yes
+New Loadshape.load7_4 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load7_4_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load7_4_Q.dbl] UseActual=yes
+New Loadshape.load8_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load8_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load8_1_Q.dbl] UseActual=yes
+New Loadshape.load8_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load8_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load8_2_Q.dbl] UseActual=yes
+New Loadshape.load8_3 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load8_3_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load8_3_Q.dbl] UseActual=yes
+New Loadshape.load8_4 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load8_4_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load8_4_Q.dbl] UseActual=yes
+New Loadshape.load9_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load9_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load9_1_Q.dbl] UseActual=yes
+New Loadshape.load9_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load9_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load9_2_Q.dbl] UseActual=yes
+New Loadshape.load10_1 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load10_1_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load10_1_Q.dbl] UseActual=yes
+New Loadshape.load10_2 Npts=8759 mInterval=60 mult=[dblfile=BinaryLoadShapeFiles\\load10_2_P.dbl],  Qmult=[dblfile=BinaryLoadShapeFiles\\load10_2_Q.dbl] UseActual=yes
+
+Redirect LinesTrafosLoads.dss
+New energymeter.feeder element=line.SSswitch terminal=1 action=C option=m
+New Monitor.feeder_vi element=line.SSswitch terminal=1 mode=112
+New Monitor.feeder_pq element=line.SSswitch terminal=1 mode=65
+Set voltagebases = [12,0.24]
+CalcVoltagebases
+Buscoords BusCoords.dss

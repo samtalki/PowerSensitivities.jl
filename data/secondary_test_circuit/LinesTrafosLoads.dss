@@ -1,0 +1,121 @@
+New Line.Line1 bus1=BusPrim1 bus2=BusPrim2  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line2 bus1=BusPrim2 bus2=BusPrim3  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line3 bus1=BusPrim3 bus2=BusPrim4  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line4 bus1=BusPrim4 bus2=BusPrim5  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line5 bus1=BusPrim5 bus2=BusPrim6  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line6 bus1=BusPrim6 bus2=BusPrim7  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line7 bus1=BusPrim7 bus2=BusPrim8  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line8 bus1=BusPrim8 bus2=BusPrim9  length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+New Line.Line9 bus1=BusPrim9 bus2=BusPrim10 length=100 phases=3 r1=0.03 x1=0.06 r0=0.001 x0=0.001 c1=1 normamps=1500 units=m enabled=TRUE 
+
+! Secondary circuit 1: 1 MV/LV transformer and 5 loads each connected to the transformer with own service line
+New Transformer.Trafo1 phases=3 wdg=1  bus=BusPrim1  conn=delta kv=12 kVA=50 %R=1.6 wdg=2 bus=BusTrafo1LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=1.6 XHL=4.7
+New Line.LineSec1_1 bus1=BusTrafo1LV bus2=BusSec1_1 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec1_2 bus1=BusTrafo1LV bus2=BusSec1_2 length=10 phases=3 r1=0.002 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec1_3 bus1=BusTrafo1LV bus2=BusSec1_3 length=10 phases=3 r1=0.003 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec1_4 bus1=BusTrafo1LV bus2=BusSec1_4 length=10 phases=3 r1=0.001 x1=0.0015 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec1_5 bus1=BusTrafo1LV bus2=BusSec1_5 length=10 phases=3 r1=0.001 x1=0.0035 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load1_1 phases=3 Conn=Wye bus=BusSec1_1 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load1_1
+New Load.Load1_2 phases=3 Conn=Wye bus=BusSec1_2 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load1_2
+New Load.Load1_3 phases=3 Conn=Wye bus=BusSec1_3 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load1_3
+New Load.Load1_4 phases=3 Conn=Wye bus=BusSec1_4 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load1_4
+New Load.Load1_5 phases=3 Conn=Wye bus=BusSec1_5 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load1_5
+
+! Secondary circuit 2: 1 MV/LV transformer and 1 large load connected to the transformer with a service line
+New Transformer.Trafo2 phases=3 wdg=1  bus=BusPrim2  conn=delta kv=12 kVA=50 %R=0.5 wdg=2 bus=BusTrafo2LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=0.5 XHL=5.7
+New Line.LineSec2_1 bus1=BusTrafo2LV bus2=BusSec2_1 length=10 phases=3 r1=0.0004 x1=0.001 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load2 phases=3 Conn=Wye bus=BusSec2_1 kV=0.24 Model=1 kW=40 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load2
+
+! Secondary circuit 3: 1 MV/LV transformer and 5 loads connected over a serial service drop
+New Transformer.Trafo3 phases=3 wdg=1  bus=BusPrim3  conn=delta kv=12 kVA=50 %R=0.4 wdg=2 bus=BusTrafo3LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=0.4 XHL=6.0
+New Line.LineSec3_1 bus1=BusTrafo3LV bus2=BusSec3_1 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec3_2 bus1=BusSec3_1 bus2=BusSec3_2 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001  normamps=1500 units=m enabled=TRUE 
+New Line.LineSec3_3 bus1=BusSec3_2 bus2=BusSec3_3 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec3_4 bus1=BusSec3_3 bus2=BusSec3_4 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load3_1 phases=3 Conn=Wye bus=BusTrafo3LV kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load3_1
+New Load.Load3_2 phases=3 Conn=Wye bus=BusSec3_1 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load3_2
+New Load.Load3_3 phases=3 Conn=Wye bus=BusSec3_2 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load3_3
+New Load.Load3_4 phases=3 Conn=Wye bus=BusSec3_3 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load3_4
+New Load.Load3_5 phases=3 Conn=Wye bus=BusSec3_4 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load3_5
+
+! Secondary circuit 4: 1 MV/LV transformer and 5 loads connected on a pedestal
+New Transformer.Trafo4 phases=3 wdg=1  bus=BusPrim4  conn=delta kv=12 kVA=50 %R=0.5 wdg=2 bus=BusTrafo4LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=0.5 XHL=5.7
+New Line.LineSec4_0 bus1=BusTrafo4LV bus2=BusSec4_0 length=10 phases=3 r1=0.002 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec4_1 bus1=BusSec4_0 bus2=BusSec4_1 length=10 phases=3 r1=0.005 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec4_2 bus1=BusSec4_0 bus2=BusSec4_2 length=10 phases=3 r1=0.005 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec4_3 bus1=BusSec4_0 bus2=BusSec4_3 length=10 phases=3 r1=0.005 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec4_4 bus1=BusSec4_0 bus2=BusSec4_4 length=10 phases=3 r1=0.005 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec4_5 bus1=BusSec4_0 bus2=BusSec4_5 length=10 phases=3 r1=0.005 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load4_1 phases=3 Conn=Wye bus=BusSec4_1 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load4_1
+New Load.Load4_2 phases=3 Conn=Wye bus=BusSec4_2 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load4_2
+New Load.Load4_3 phases=3 Conn=Wye bus=BusSec4_3 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load4_3
+New Load.Load4_4 phases=3 Conn=Wye bus=BusSec4_4 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load4_4
+New Load.Load4_5 phases=3 Conn=Wye bus=BusSec4_5 kV=0.24 Model=1 kW=7 kVAR=2 Vminpu=0.7 Vmaxpu=1.4 duty=Load4_5
+
+! Secondary circuit 5: 1 MV/LV transformer, 2 loads at the transformer and 2 loads each connected over a service line to a pedestal
+New Transformer.Trafo5 phases=3 wdg=1  bus=BusPrim5  conn=delta kv=12 kVA=50 %R=0.8 wdg=2 bus=BusTrafo5LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=0.8 XHL=5.5
+New Line.LineSec5_0 bus1=BusTrafo5LV bus2=BusSec5_0 length=10 phases=3 r1=0.004 x1=0.004 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec5_1 bus1=BusSec5_0 bus2=BusSec5_1 length=10 phases=3 r1=0.004 x1=0.004 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec5_2 bus1=BusSec5_0 bus2=BusSec5_2 length=10 phases=3 r1=0.004 x1=0.004 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec5_3 bus1=BusTrafo5LV bus2=BusSec5_3 length=10 phases=3 r1=0.004 x1=0.004 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec5_4 bus1=BusTrafo5LV bus2=BusSec5_4 length=10 phases=3 r1=0.004 x1=0.004 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load5_1 phases=3 Conn=Wye bus=BusSec5_1 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load5_1
+New Load.Load5_2 phases=3 Conn=Wye bus=BusSec5_2 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load5_2
+New Load.Load5_3 phases=3 Conn=Wye bus=BusSec5_3 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load5_3
+New Load.Load5_4 phases=3 Conn=Wye bus=BusSec5_4 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load5_4
+
+! Secondary circuit 6: 1 MV/LV transformer, 2 service line each with 1 pedestals with two loads
+New Transformer.Trafo6 phases=3 wdg=1  bus=BusPrim6  conn=delta kv=12 kVA=50 %R=1.2 wdg=2 bus=BusTrafo6LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=1.2 XHL=5.2
+New Line.LineSec6_01 bus1=BusTrafo6LV bus2=BusSec6_01 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec6_02 bus1=BusTrafo6LV bus2=BusSec6_02 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec6_1 bus1=BusSec6_01 bus2=BusSec6_1 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec6_2 bus1=BusSec6_01 bus2=BusSec6_2 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec6_3 bus1=BusSec6_02 bus2=BusSec6_3 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec6_4 bus1=BusSec6_02 bus2=BusSec6_4 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load6_1 phases=3 Conn=Wye bus=BusSec6_1 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load6_1
+New Load.Load6_2 phases=3 Conn=Wye bus=BusSec6_2 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load6_2
+New Load.Load6_3 phases=3 Conn=Wye bus=BusSec6_3 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load6_3
+New Load.Load6_4 phases=3 Conn=Wye bus=BusSec6_4 kV=0.24 Model=1 kW=10 kVAR=3 Vminpu=0.7 Vmaxpu=1.4 duty=Load6_4
+
+! Secondary circuit 7: 1 MV/LV transformer, 1 service line with two pedestals each with two loads 
+New Transformer.Trafo7 phases=3 wdg=1  bus=BusPrim7  conn=delta kv=12 kVA=50 %R=0.7 wdg=2 bus=BusTrafo7LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=0.7 XHL=5.6
+New Line.LineSec7_01 bus1=BusTrafo7LV bus2=BusSec7_01 length=10 phases=3 r1=0.001 x1=0.002 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec7_02 bus1=BusSec7_01 bus2=BusSec7_02 length=10 phases=3 r1=0.003 x1=0.002 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec7_1 bus1=BusSec7_01 bus2=BusSec7_1 length=10 phases=3 r1=0.002 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec7_2 bus1=BusSec7_01 bus2=BusSec7_2 length=10 phases=3 r1=0.003 x1=0.002 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec7_3 bus1=BusSec7_02 bus2=BusSec7_3 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec7_4 bus1=BusSec7_02 bus2=BusSec7_4 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load7_1 phases=3 Conn=Wye bus=BusSec7_1 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load7_1
+New Load.Load7_2 phases=3 Conn=Wye bus=BusSec7_2 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load7_2
+New Load.Load7_3 phases=3 Conn=Wye bus=BusSec7_3 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load7_3
+New Load.Load7_4 phases=3 Conn=Wye bus=BusSec7_4 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load7_4
+
+! Secondary circuit 8: 1MV/LV transformer, 	1 service line with 2 pedestals, first with one load, second with 3 loads
+New Transformer.Trafo8 phases=3 wdg=1  bus=BusPrim8  conn=delta kv=12 kVA=50 %R=0.4 wdg=2 bus=BusTrafo8LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=0.4 XHL=6.0
+New Line.LineSec8_01 bus1=BusTrafo8LV bus2=BusSec8_01 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec8_02 bus1=BusSec8_01 bus2=BusSec8_02 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec8_1 bus1=BusSec8_01 bus2=BusSec8_1 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec8_2 bus1=BusSec8_02 bus2=BusSec8_2 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec8_3 bus1=BusSec8_02 bus2=BusSec8_3 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec8_4 bus1=BusSec8_02 bus2=BusSec8_4 length=10 phases=3 r1=0.001 x1=0.0025 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load8_1 phases=3 Conn=Wye bus=BusSec8_1 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load8_1
+New Load.Load8_2 phases=3 Conn=Wye bus=BusSec8_2 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load8_2
+New Load.Load8_3 phases=3 Conn=Wye bus=BusSec8_3 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load8_3
+New Load.Load8_4 phases=3 Conn=Wye bus=BusSec8_4 kV=0.24 Model=1 kW=10 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load8_4
+
+! Secondary circuit 9: 1MV/LV transformer, 1 service line with one pedestal with two loads
+New Transformer.Trafo9 phases=3 wdg=1  bus=BusPrim9  conn=delta kv=12 kVA=50 %R=0.8 wdg=2 bus=BusTrafo9LV  conn=wye kv=0.24 kVA=50 tap=1.000 %R=0.8 XHL=5.5
+New Line.LineSec9_0 bus1=BusTrafo9LV bus2=BusSec9_0 length=10 phases=3 r1=0.00075 x1=0.001 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec9_1 bus1=BusSec9_0   bus2=BusSec9_1 length=10 phases=3 r1=0.001 x1=0.001 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec9_2 bus1=BusSec9_0   bus2=BusSec9_2 length=10 phases=3 r1=0.0005 x1=0.0015 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load9_1 phases=3 Conn=Wye bus=BusSec9_1 kV=0.24 Model=1 kW=20 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load9_1
+New Load.Load9_2 phases=3 Conn=Wye bus=BusSec9_2 kV=0.24 Model=1 kW=20 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load9_2
+
+! Secondary circuit 10: 1MV/LV transformer, 1 load at the transformer, 1 load over a service line with one pedestal
+New Transformer.Trafo10 phases=3 wdg=1 bus=BusPrim10 conn=delta kv=12 kVA=50 %R=1.7 wdg=2 bus=BusTrafo10LV conn=wye kv=0.24 kVA=50 tap=1.000 %R=1.7 XHL=4.7
+New Line.LineSec10_0 bus1=BusTrafo10LV bus2=BusSec10_0 length=10 phases=3 r1=0.003 x1=0.003 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec10_1 bus1=BusTrafo10LV bus2=BusSec10_1 length=10 phases=3 r1=0.004 x1=0.002 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Line.LineSec10_2 bus1=BusSec10_0 bus2=BusSec10_2 length=10 phases=3 r1=0.004 x1=0.002 r0=0.000001 x0=0.000001 c1=0.000001 c0=0.000001 normamps=1500 units=m enabled=TRUE 
+New Load.Load10_1 phases=3 Conn=Wye bus=BusSec10_1 kV=0.24 Model=1 kW=20 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load10_1
+New Load.Load10_2 phases=3 Conn=Wye bus=BusSec10_2 kV=0.24 Model=1 kW=20 kVAR=5 Vminpu=0.7 Vmaxpu=1.4 duty=Load10_2
+
