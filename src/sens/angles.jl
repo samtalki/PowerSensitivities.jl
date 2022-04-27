@@ -38,16 +38,16 @@ end
 Given voltage magnitudes vm, net reactive injections qnet and block ∂q/∂v:
 Calculate ∂p/∂θ block of the power flow Jacobian
 """
-function calc_pth_jacobian(∂q∂v::AbstractMatrix,vm::AbstractVector,q::AbstractVector)
+function calc_pth_jacobian(∂qv::AbstractMatrix,vm::AbstractVector,q::AbstractVector)
     n = length(vm)
     ∂p∂θ = zeros((n,n))
     for i in 1:n
         for (k,v_k) in enumerate(vm)
             q_k = q[k]
             if i==k
-                ∂p∂θ[i,i] = v_k*∂q∂v[i,i] - 2*q_k
+                ∂p∂θ[i,i] = v_k*∂qv[i,i] - 2*q_k
             else
-                ∂p∂θ[i,k] = v_k*∂q∂v[i,k]
+                ∂p∂θ[i,k] = v_k*∂qv[i,k]
             end
         end
     end
@@ -94,16 +94,16 @@ end
 Given a vector of voltage magnitudes vm, vector of real power injections pm, and the ∂p/∂v Jacobian block:
 Calculate the ∂q/∂θ Jacobian block 
 """
-function calc_qth_jacobian(∂p∂v::AbstractMatrix,vm::AbstractVector,p::AbstractVector)
+function calc_qth_jacobian(∂pv::AbstractMatrix,vm::AbstractVector,p::AbstractVector)
     n = length(vm)
     ∂q∂θ = zeros((n,n))
     for i in 1:n
         for (k,v_k) in enumerate(vm)
             p_k = p[k]
             if i==k
-                ∂q∂θ[i,k] = -v_k*∂p∂v[i,k] + 2*p_k
+                ∂q∂θ[i,k] = -v_k*∂pv[i,k] + 2*p_k
             else
-                ∂q∂θ[i,k] = -v_k*∂p∂v[i,k]
+                ∂q∂θ[i,k] = -v_k*∂pv[i,k]
             end
         end
     end

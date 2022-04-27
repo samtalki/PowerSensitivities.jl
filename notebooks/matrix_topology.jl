@@ -12,7 +12,7 @@ begin
 end
 
 # ╔═╡ 84626e0e-24ee-4e53-b760-f6e5e680e6bb
-
+model = parse_dss("/home/sam/github/PowerSensitivities.jl/data/secondary_test_circuit/compileCircuit.dss")
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
