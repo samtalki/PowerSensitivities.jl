@@ -7,11 +7,11 @@ using InteractiveUtils
 # ╔═╡ bf7c122a-a2e7-11ec-3063-0bcff1909553
 begin 
 	using LinearAlgebra
-	using Plots
 	using PowerModels
 	using ForwardDiff
 	using ImplicitEquations
 	using LaTeXStrings
+	using Plots
 end
 
 # ╔═╡ 8b2c4808-62fd-42a9-9f82-1d9bf7f304d0
@@ -21,18 +21,15 @@ main {
 }
 """
 
-# ╔═╡ c1c0daa8-c632-4493-956d-d8e6ffd8080a
-
-
 # ╔═╡ 89ea0207-c19d-4448-a02b-d16d38b6aff5
 begin
 	"""Expressions for power factor"""
 	pf(p,q) = abs.(p./(sqrt.(p.^2 .+ q.^2))) 
-	pf(p,q) = sqrt.(p.^2 .+ q.^2) > 0 ? cos.(atan.(q./p)) : NaN
-	pf(p,q) = sqrt.(p.^2 .+ q.^2) >0 ? cos.(angle.(p .+ q.*im)) : NaN
-	pf(s) = abs.(s) .> 0 ? real.(s)./abs.(s) : NaN
-	pf(s) = abs.(s) .> 0 ? cos.(atan.(imag.(s)./real.(s))) : NaN
-	pf(s) = abs.(s) .> 0 ? cos.(angle.(s)) : NaN
+	pf(p,q) = cos.(atan.(q./p))
+	pf(p,q) = cos.(angle.(p .+ q.*im)) 
+	pf(s) = real.(s)./abs.(s) 
+	pf(s) = cos.(atan.(imag.(s)./real.(s))) 
+	pf(s) = cos.(angle.(s))
 end
 
 # ╔═╡ a40a7c3b-6a8a-4db6-bdd3-2c86a9fbb57b
@@ -44,8 +41,8 @@ end
 
 # ╔═╡ 6c187b3a-a13f-49fc-8acd-f4df10be683b
 begin
-	q(p::Real,pf::Real=0.95) = p.*tan.(acos.(pf))
-	q(pf::AbstractArray,p::Real) = k.(pf)*p
+	q(p,pf=0.95) = p .* tan.(acos.(pf))
+	q(pf,p) = k.(pf) .* p
 end
 
 # ╔═╡ ddcfa7d4-ff56-4835-8822-d2fb9fc622e9
@@ -61,61 +58,57 @@ end
 # ╔═╡ 35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
 begin
 	#Range of power factors
-	α = 0:0.001:1
-	ps = [0.5 1 5 15 30 50]
-	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5])]
+	α = -1:0.001:1
+	ps = [1 5 15 20 30 40 60 80]
+	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5]) q(α,ps[6]) q(α,ps[7]) q(α,ps[8])]
 	capacitive = -1 .* data
-	labels = [string(p_i) for p_i in ps]
+	#labels = [string(p_i) for p_i in ps]
 	#Inductive Plot
 	ind = plot(
 		α,
 		data,
 		ylims=(-100,100),
-		label=labels,
-		color=[2 3 4 5 6],
-		color_palette = palette(:Greens, 7),
+		color=[3 4 5 6 7 8 9 10 11],
+		color_palette = palette(:Greens, 10),
+		colorbar=:legend,
+		label=["" "" "" "" "" "" "" L"$q_i > 0$"],
 		legend_position=:bottomright,
-		legend_title=L"$p_i$ (kW) Capacitive",
-		legend_title_font_pointsize=9,
+		#legend_title=L"$p_i$ (kW) Capacitive",
+		#legend_title_font_pointsize=9,
 		ylabel=L"Reactive Power $q_i$ (kVAR)",
-		title = L"$q(\alpha_i) = k(\alpha_i) p_i$"
 	)
 	# #Capacitive Pot
 	cap = plot!(α,
 		capacitive,
 		ylims=(-100,100),
 		#ls=:dash,
-		legend_position=:bottomleft,
-		color=[2 3 4 5 6],
-		color_palette = palette(:Oranges, 7),
-		labels=labels,
-		legend_title=L"$p_i$ (kW) Inductive",
-		legend_title_font_pointsize=9,
-		title = L"$q(\alpha_i) = -k(\alpha_i) p_i$",
+		color=[3 4 5 6 7 8 9 10 11],
+		color_palette = palette(:Oranges, 10),
+		label=["" "" "" "" "" "" "" L"$q_i < 0$"],
+		#legend_title=L"$p_i$ (kW) Inductive",
+		#legend_title_font_pointsize=9,
 	)
 	
 	#plot(ind,cap)
 	#title!(L"$q(\alpha_i) = k(\alpha_i)p_i = \frac{\sqrt{1-\alpha_i^2}}{\alpha_i} p_i$")
+	title!(L"$q(\alpha_i) = k(\alpha_i) p_i = \pm \frac{p_i}{\alpha_i} \sqrt{1- \alpha_i^2} $")
 	xlabel!("Power Factor "*L"\alpha_i")
 	#ylabel!(L"Reactive Power $q_i$ (kVAR)")
-	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_representation_cap_ind.pdf")
+	savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/beautiful_implicit_representation_cap_ind.pdf")
 end
 
 
 # ╔═╡ f5394f0b-f02e-4251-8f4e-f1099f9c4e52
-Plots.color()
+["" "" "" L"$q_i < 0$"]
 
 # ╔═╡ 28c24fd0-1375-4763-856f-fab3c496ea86
 begin
-	#Reactive power functions
-	q_signed(pf,p) = 
-	pfs = -1:0.001:1
-	plot([q_ind,q_cap],pfs)
-	for p in ps
-		p=p
-		plot([q_ind,q_cap],pfs)
-	end
-
+	pfs = LinRange(0, 1, 100)
+	pobs = LinRange(0, 10, 100)
+	qobs = LinRange(0,10,100)
+	#qs = [q(pf_k,p_k) for pf_k in pfs, p_k in pobs]
+	co = contourf(pfs, qobs, pobs,
+	    extendlow = :cyan, extendhigh = :magenta)
 end
 
 
@@ -131,16 +124,13 @@ begin
 end
 
 # ╔═╡ 111218b9-05f9-47c4-9467-17f38fc4e012
-
-
-# ╔═╡ cfa65d4d-ac3d-4373-916a-5050fec59ce2
-
+curves([1,2,3,4],[1,1,2,4])
 
 # ╔═╡ 2bdb4883-577b-4958-a160-75e5c96a8505
-
+1 == 0 ? println("yes") : nothing
 
 # ╔═╡ 6866179f-b9b3-4663-95ba-1455eb453cdf
- scatter(rand(10,4), markershape = [:circle :rect])
+
 
 # ╔═╡ 65f8275d-aebb-4a8a-b76e-94d43188185b
 
@@ -1271,7 +1261,6 @@ version = "0.9.1+5"
 # ╔═╡ Cell order:
 # ╠═8b2c4808-62fd-42a9-9f82-1d9bf7f304d0
 # ╠═bf7c122a-a2e7-11ec-3063-0bcff1909553
-# ╠═c1c0daa8-c632-4493-956d-d8e6ffd8080a
 # ╠═89ea0207-c19d-4448-a02b-d16d38b6aff5
 # ╠═a40a7c3b-6a8a-4db6-bdd3-2c86a9fbb57b
 # ╠═6c187b3a-a13f-49fc-8acd-f4df10be683b
@@ -1282,7 +1271,6 @@ version = "0.9.1+5"
 # ╠═28c24fd0-1375-4763-856f-fab3c496ea86
 # ╠═ac48dadf-533f-4178-b99b-b4d6395dc80d
 # ╠═111218b9-05f9-47c4-9467-17f38fc4e012
-# ╠═cfa65d4d-ac3d-4373-916a-5050fec59ce2
 # ╠═2bdb4883-577b-4958-a160-75e5c96a8505
 # ╠═6866179f-b9b3-4663-95ba-1455eb453cdf
 # ╠═65f8275d-aebb-4a8a-b76e-94d43188185b
