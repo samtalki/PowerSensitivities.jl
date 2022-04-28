@@ -12,7 +12,21 @@ begin
 end
 
 # ╔═╡ 84626e0e-24ee-4e53-b760-f6e5e680e6bb
-model = parse_dss("/home/sam/github/PowerSensitivities.jl/data/secondary_test_circuit/compileCircuit.dss")
+begin
+	xs = [string("x", i) for i = 1:10]
+	ys = [string("y", i) for i = 1:4]
+	z = float((1:4) * reshape(1:10, 1, :))
+	A = [ 0 3 ; 5 6]
+	# h1 = heatmap(xs, ys, z, aspect_ratio = 1)
+	# h2 = heatmap(xs, ys, z, aspect_ratio = 1)
+	# h3 = heatmap(xs, ys, z, aspect_ratio = 1)
+	# h4 = heatmap(xs, ys, z, aspect_ratio = 1)
+	h1 = heatmap(A,title="test")
+	h2 = heatmap(A,title="test")
+	h3 = heatmap(A)
+	h4 = heatmap(A)
+	plot(h1,h2,h3,h4)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
