@@ -1,8 +1,9 @@
-# Newton-raphson power flow with mutable injection and voltage states to enable automatic differentiation.
+# Newton-raphson power flow with automatic differentiation.
 
 using LinearAlgebra, SparseArrays
 import ForwardDiff
 import PowerModels as PM
+import PowerSensitivies as PS
 
 """
 Type that comprises a standard Newton-Raphson sensitivity model for a power network
@@ -13,7 +14,7 @@ Type that comprises a standard Newton-Raphson sensitivity model for a power netw
 struct SensitivityModel 
     data::Dict{String, Any} #PowerModels network
     Y::SparseMatrixCSC #Network admittance matrix
-    J::Function #The  power flow Jacobian found through automatic differentiatiation
+    J::Function # J: vph ∈ R²ⁿ ↦ Δx ∈ R²ⁿ. A function that returns the power flow Jacobian through automatic differentiatiation
 end
 
 """
@@ -24,7 +25,7 @@ function SensitivityModel(data::Dict{String, Any})
     s_inj = PM.calc_basic_bus_injection(data)
     Y = PM.calc_basic_admittance_matrix(data)
     mismatch = v_ph::AbstractArray -> calc_mismatch(v_ph,s_inj,Y)
-    J = v_ph::AbstractArray -> ForwardDiff.jacobian(mismatch,v_ph) #Note: v_ph = [θ ; vmag]
+    J = v_ph::AbstractArray -> -1 .* ForwardDiff.jacobian(mismatch,v_ph) #Note: v_ph = [θ ; vmag]
     return SensitivityModel(data,Y,J)
 end
 
@@ -67,16 +68,20 @@ function calc_phasor_bus_voltage(v_rect::AbstractArray)
 end
 
 #Load a basic test case
-case5 = PM.make_basic_network(PM.parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
+data = PM.make_basic_network(PM.parse_file("/home/sam/github/PowerSensitivities.jl/data/radial_test/case4_dist.m"))
 
 #Solve the AC Power flow equations
-#PM.compute_ac_pf!(case5)
+#PM.compute_ac_pf!(data)
+
+#Get the PQ and PQ+PV bus indeces
+pq_idx = PS.calc_bus_idx_of_type(data,[1])
+pq_pv_idx = PS.calc_bus_idx_of_type(data,[1,2])
 
 #Compute the phasor voltages at the solution [θ ; vmag]
-v_ph_sol = calc_phasor_bus_voltage(case5)
+v_ph_sol = calc_phasor_bus_voltage(data)
 
 #Calculate the analytical Jacobian using the power flow equations and the SensitivityModel version. Check they are the same.
-model = SensitivityModel(case5) #Create a sensitivity model
-J_analytic = PM.calc_basic_jacobian_matrix(case5) #Equations-based jacobian
+model = SensitivityModel(data) #Create a sensitivity model
+J_analytic = PM.calc_basic_jacobian_matrix(data) #Equations-based jacobian
 J_automatic = model.J(v_ph_sol)
 @assert norm(J_analytic-J_automatic) < 1e-3
