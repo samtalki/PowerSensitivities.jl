@@ -5,3 +5,4 @@ data/radial_test copy/*
 py/results/ieee123_Srec_RealVaryP_0.9fpf.pkl
 src/test/results/*
 data/radial_test.zip
+docs/*
