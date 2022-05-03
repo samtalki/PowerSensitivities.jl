@@ -2,7 +2,7 @@
 Given a network data dict, calculate the nodal power factors
 """
 calc_basic_power_factor(network::Dict{String,<:Any}) =  [abs(cos(θi)) for θi in angle.(calc_basic_bus_injection(network))]
-#calc_basic_power_factor(network::Dict{String,<:Any}) =  cos.(angle.(calc_basic_bus_injection(network)))
+calc_basic_power_factor(s::AbstractArray) =  [abs(cos(θi)) for θi in angle.(s)]
 
 """
 Implicit function theorem representation of reactive power. This is used to make entries of the K matrix.

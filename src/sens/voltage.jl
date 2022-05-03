@@ -1,3 +1,41 @@
+###############################################################################
+# Data Structures and Functions for working with a network Voltage Sensitivity matrix
+###############################################################################
+
+
+struct VoltageSensitivityMatrix
+    vp::AbstractMatrix # N x N matrix ∂v/∂p 
+	vq::AbstractMatrix # N x N matrix ∂v/∂q
+end
+
+"""Calculate the Voltage sensitivity matrices matrix for a PowerModels network data model; only supports networks with exactly one reference bus"""
+function calc_voltage_sensitivity_matrix(J::AbstractMatrix)
+    (two_n,two_n) = size(J)
+    n = two_n/2
+    Jinv = inv(Matrix(J.matrix))
+    ∂vp, ∂vq = Jinv[n+1:end, 1:n], Jinv[n+1:end, n+1:end] #extract sensitivity matrices
+    return VoltageSensitivityMatrix(∂vp,∂vq)
+end
+
+"""
+Given a network data dict, and optionally sel_bus_types ⊂{1,2,3}:
+Calculate voltage-power-sensitivities ∂v/∂p and ∂v/∂q
+"""
+function calc_voltage_sensitivity_matrix(network::Dict{String,<:Any})
+    J = calc_basic_jacobian_matrix(network) #Make the jacobian matrix
+    n_bus = length(network["bus"]) #Get number of buses
+    @assert size(J) == (2*n_bus,2*n_bus) #Check dims
+    return calc_voltage_sensitivity_matrix(J.matrix)
+end
+
+function calc_voltage_sensitivity_matrix(network::Dict{String,<:Any},sel_bus_types::Union{Vector,Set})
+    J = calc_jacobian_matrix(network,sel_bus_types) #Make the jacobian matrix
+    n_bus = length(calc_bus_idx_of_type(network,sel_bus_types))
+    @assert size(J) == (2*n_bus,2*n_bus) #Check dims
+    return calc_voltage_sensitivity_matrix(J.matrix)
+end
+
+
 """
 Given a network data dict, and sel_bus_types ⊂{1,2,3}:
 Calculate power flow Jacobian block ∂p/∂v  
@@ -73,6 +111,4 @@ function calc_qv_jacobian(network::Dict{String,<:Any})
     return ∂q∂v
 end
 
-"""
-Given voltage magnitudes, power injections, and the ∂  
-"""
+

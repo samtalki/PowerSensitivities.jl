@@ -1,5 +1,7 @@
 module PowerSensitivities
-using PowerModels,OPFLearn
+
+
+using PowerModels
 using JuMP, Ipopt 
 using TimeSeries
 using Statistics
@@ -11,11 +13,13 @@ PowerModels.silence()
 
 include("matrix_completion.jl")
 include("network.jl")
-include("data/ami.jl")
 include("power_factor.jl")
 include("jacobian_matrix.jl")
+include("data/ami.jl")
+
 include("sens/voltage.jl")
 include("sens/angles.jl")
+
 include("util/matrix.jl")
 include("util/bus_index.jl")
 

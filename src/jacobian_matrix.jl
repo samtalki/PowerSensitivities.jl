@@ -27,7 +27,7 @@ struct PowerFlowJacobian{T}
 end
 
 
-"data should be a PowerModels network data model; only supports networks with exactly one reference bus"
+"""Calculate the jacobian matrix for a PowerModels network data model; only supports networks with exactly one reference bus"""
 function calc_jacobian_matrix(data::Dict{String,<:Any})
     num_bus = length(data["bus"])
     Y = calc_admittance_matrix(data)
