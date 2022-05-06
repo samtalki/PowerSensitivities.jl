@@ -1,7 +1,24 @@
 This package is under development.
 
+## Installation
+
+### Clone the repository
+```
+git clone --recurse-submodules
+```
+
+### Activate the Julia environment
+```
+pkg> activate .
+```
+
 ## Reproducible Research
-- Analytical Results (Julia, PowerModels.jl):
+We invite you to reproduce the results of our research through the following steps. 
+
+### Analytical Results (Julia):
+
+After activating the Julia environment, reproduce the following results with the corresponding commands in the Julia REPL:
+
     - Assumption 1 and 2 validity:
     ```
     include("src/test/assum1.jl")
@@ -18,12 +35,23 @@ This package is under development.
     ```
     include("src/test/eigs_jac.jl")
     ```
-- Numerical Results (Python, CVXPY):
+
+### Numerical Results (Python):
+Use your favorite Python environment with the following packages:
+    - Numpy
+    - Numba
+    - CVXPY
+    - Matplotlib
+    - Seaborn
+    - Pandas
+    - OpenDSSDirect
+
+Reproduce the numerical results with the following notebooks:
     - Matrix Recovery
     ```
     py/SensitivityModelingCVXPY.ipynb
     ```
-    - Estimation of complex power from voltage magnitudes
+    - Complex deviation estimation
     ```
     py/ImplSMatrix.ipynb
     ```
