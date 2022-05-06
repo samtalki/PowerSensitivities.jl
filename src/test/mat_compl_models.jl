@@ -1,5 +1,4 @@
-include("PowerSensitivities.jl")
-import .PowerSensitivities
+import PowerSensitivities as PS
 using PowerModels
 using LinearAlgebra
 using Flux 
@@ -18,8 +17,8 @@ function matrec_loss(Δx,Δv)
     return Flux.Losses.mse(Δv̂,Δv) + λ*norm_nuc(S)
 end
 
-c5 = make_basic_network(parse_file("/home/sam/github/PowerSensitivities.jl/data/matpower/case5.m"))
-dataset = PowerSensitivities.make_ami_dataset(c5,[1],500)
+c5 = make_basic_network(parse_file("../data/matpower/case5.m"))
+dataset = PS.make_ami_dataset(c5,[1],500)
 
 
 θ = params(S,λ)

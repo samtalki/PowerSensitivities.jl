@@ -2,9 +2,7 @@ using JuMP
 using LinearAlgebra
 using Ipopt
 
-"""
-JuMP model for phase retrieval 
-"""
+
 function phase_retrieval(; verbose=true)
     model = Model(Ipopt.Optimizer)
     @variable(model,θ[1:n_bus]) #The phase angle difference between voltage and current

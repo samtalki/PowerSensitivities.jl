@@ -1,5 +1,3 @@
-
-
 """
 Given an incomplete sensitivity matrix S, return a matrix completion model
 """

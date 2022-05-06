@@ -1,6 +1,4 @@
 module PowerSensitivities
-
-
 using PowerModels
 using JuMP, Ipopt 
 using TimeSeries
@@ -11,17 +9,25 @@ using Flux
 PowerModels.silence()
 
 
-include("matrix_completion.jl")
-include("network.jl")
-include("power_factor.jl")
-include("jacobian_matrix.jl")
+#AMI Functionality
 include("data/ami.jl")
 
+#Core functions
+include("core/power_factor.jl")
+include("core/jacobian_matrix.jl")
+
+#Sensitivity functions
 include("sens/voltage.jl")
 include("sens/angles.jl")
 
+#Data utilities
+include("util/network.jl")
 include("util/matrix.jl")
 include("util/bus_index.jl")
+
+#Problem statements
+include("prob/matrix_completion.jl")
+
 
 #Jacobian matrix utilities
 export PowerFlowJacobian, calc_jacobian_matrix
