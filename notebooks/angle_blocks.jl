@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.2
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
@@ -16,6 +16,9 @@ begin
 	using DataFrames
 	using Gadfly
 end
+
+# ╔═╡ 56e35086-c912-4bce-864c-096435a31d49
+pwd()
 
 # ╔═╡ dfb0816c-aeda-4124-957a-f439fe8dde28
 function plot_matrix(M)
@@ -86,7 +89,7 @@ end
 # ╔═╡ 24193ad5-8e28-4351-bcc7-ebe902b9b8a7
 begin
 	#Load network data
-	data = make_basic_network(parse_file("data/radial_test/case4_dist.m"))
+	data = make_basic_network(parse_file("case5.m"))
 	Y = calc_admittance_matrix(data)
 	J = calc_jacobian_matrix(data,1)
 	vm,q = abs.(calc_basic_bus_voltage(data)),imag(calc_basic_bus_injection(data))
@@ -1267,6 +1270,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╠═3a02936c-9fcc-11ec-2bee-270c8626402c
 # ╠═24193ad5-8e28-4351-bcc7-ebe902b9b8a7
+# ╠═56e35086-c912-4bce-864c-096435a31d49
 # ╠═dfb0816c-aeda-4124-957a-f439fe8dde28
 # ╠═436a43d6-4d70-4eba-9f29-b198f4ba9ebe
 # ╠═cc904d3d-d426-4da0-81ac-052fb021d262

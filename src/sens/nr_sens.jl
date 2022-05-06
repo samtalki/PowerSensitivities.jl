@@ -3,7 +3,6 @@
 using LinearAlgebra, SparseArrays
 import ForwardDiff
 import PowerModels as PM
-import PowerSensitivies as PS
 
 """
 Type that comprises a standard Newton-Raphson sensitivity model for a power network
@@ -66,22 +65,3 @@ function calc_phasor_bus_voltage(v_rect::AbstractArray)
     θ,vm = [angle(v_i) for v_i in v_rect],[abs(v_i) for v_i in v_rect]
     return [θ ; vm]
 end
-
-#Load a basic test case
-data = PM.make_basic_network(PM.parse_file("/home/sam/github/PowerSensitivities.jl/data/radial_test/case4_dist.m"))
-
-#Solve the AC Power flow equations
-#PM.compute_ac_pf!(data)
-
-#Get the PQ and PQ+PV bus indeces
-pq_idx = PS.calc_bus_idx_of_type(data,[1])
-pq_pv_idx = PS.calc_bus_idx_of_type(data,[1,2])
-
-#Compute the phasor voltages at the solution [θ ; vmag]
-v_ph_sol = calc_phasor_bus_voltage(data)
-
-#Calculate the analytical Jacobian using the power flow equations and the SensitivityModel version. Check they are the same.
-model = SensitivityModel(data) #Create a sensitivity model
-J_analytic = PM.calc_basic_jacobian_matrix(data) #Equations-based jacobian
-J_automatic = model.J(v_ph_sol)
-@assert norm(J_analytic-J_automatic) < 1e-3
