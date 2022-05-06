@@ -52,8 +52,11 @@ for (name,path) in zip(names,paths)
     end
 end
 
-#Test for non-radial cases
-####
+#Mesh cases
+#Test case path and parameters
+network_data_path = "/home/sam/github/PowerSensitivities.jl/data/pm_matpower/" #Folder with radial-only systems
+names = readdir(network_data_path);
+paths = readdir(network_data_path,join=true);
 allow_mesh = true #Whether to allow meshed test cases/require test feeder is radial
 #Results dicts
 mesh_thm1_results = Dict()
