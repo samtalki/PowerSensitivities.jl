@@ -24,10 +24,6 @@ The following scripts are included for reproducing the results from "Conditions 
     ```
     include("src/test/assum1.jl")
     ```
-    - Theorem results at default operating point:
-    ```
-    include("src/test/thm1_default.jl")
-    ```
     - Theorem results at AC power flow solution:
     ```
     include("src/test/thm1_sol.jl")
@@ -49,13 +45,5 @@ The following scripts are included for reproducing the results from "Conditions 
     ```
     py/ImplSMatrix.ipynb
     ```
-
-
-## Todo
-
-- Port matrix completion/recovery algorithms to native Julia.
-- Complete AD interfaces.
-
-
 
 
