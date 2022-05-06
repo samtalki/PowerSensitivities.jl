@@ -1,3 +1,5 @@
+This package is under heavy development.
+
 ## Reproducible Research
 The following scripts are included for reproducing the results from "Conditions for Estimation of Sensitivities of Voltage Magnitudes to Complex Power Injections" by Talkington, Turizo, Grijalva, Fernandez, and Molzahn, submitted:
 
