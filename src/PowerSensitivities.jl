@@ -34,6 +34,10 @@ export PowerFlowJacobian, calc_jacobian_matrix
 export calc_pth_jacobian, calc_qth_jacobian
 export calc_pv_jacobian, calc_qv_jacobian
 
+#Sensitivity matrix (inverse jacobian) utilities
+export VoltageSensitivityMatrix
+export calc_voltage_sensitivity_matrix
+
 
 #Network data utilities
 export make_ami_dataset,make_timeseries_dataset,calc_finite_differences
