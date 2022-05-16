@@ -84,38 +84,11 @@ function plot_eigvals(data::Dict{String,<:Any})
 	B = S.vp*inv(K) + S.vq
 
 	pA = plot_eigvals(A)
-	# title!(L"$\text{eigs}(\frac{
-	# 	\partial \boldsymbol{v}
-	# 	}{
-	# 	\partial \boldsymbol{p}
-	# 	} 
-	# 	+ \frac{
-	# 	\partial \boldsymbol{v}
-	# 	}{
-	# 	\partial \boldsymbol{q}
-	# 	} 
-	# 	\boldsymbol{K}  
-	# 	)$")
+	title!(L"$\text{eigs} \frac{\partial v}{\partial p} + \frac{\partial v}{\partial q} K$")
 	pB = plot_eigvals(B)
-	# title!(L"$\text{eigs}(
-	# 	\frac{
-	# 	\partial \boldsymbol{v}
-	# 	}{
-	# 	\partial \boldsymbol{p}
-	# 	}
-	# 	\boldsymbol{K}^{-1} 
-	# 	+ \frac{
-	# 	\partial \boldsymbol{v}
-	# 	}{
-	# 	\partial \boldsymbol{q}
-	# 	}   
-	# 	)$")
+	title!(L"$\text{eigs}\frac{\partial v}{\partial p} K^{-1} + \frac{\partial v}{\partial q}$")
 	p = plot(pA,pB)
 	return p
-	#title!("Phaseless Observabilities")
-	#case_name = data["name"]
-	#savefig(p,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/" * case_name*"_eigplot.pdf")
-	#savefig(p,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/" * case_name*"_eigplot.png")
 end
 
 function plot_eigvals!(data::Dict{String,<:Any})
@@ -135,11 +108,7 @@ function plot_eigvals(A::AbstractMatrix;sorted=true)
 	else 
 		λ = real.(eigvals(Matrix(A)))
 	end
-	return plot(
-		λ,
-		xlabel="Bus Index",
-		ylabel="Eigenvalue"
-		)
+	return plot(λ,xlabel="Bus Index",ylabel="Eigenvalue")
 end
 
 #########
@@ -185,10 +154,13 @@ begin
             
             #Plot eigenvalues
             plots[name] = plot_eigvals(network)
-            savefig(plots[name],"/home/sam/github/PowerSensitivities.jl/figures/spring_22/"*name*".pdf")
-            savefig(plots[name],"/home/sam/github/PowerSensitivities.jl/figures/spring_22/"*name*".png")
-            
-
+			try
+				savefig(plots[name],"/home/sam/github/PowerSensitivities.jl/figures/spring_22/ph_observability/" * name[1:end-2]*"_eigplot.pdf")
+				savefig(plots[name],"/home/sam/github/PowerSensitivities.jl/figures/spring_22/ph_observability/" * name[1:end-2]*"_eigplot.png")		
+			catch
+				continue
+			end
+			
             #Save network
             radial_network_dicts[name] = network
 	    end

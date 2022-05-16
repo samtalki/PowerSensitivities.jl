@@ -275,7 +275,7 @@ end
 begin
 
 #q>0
-	plot(
+plot_clean=plot(
 		α,
 		data,
 		ylims=(-100,100),
@@ -287,7 +287,7 @@ begin
 		ylabel=L"Reactive Power $q_i$ (kVAR)",
 
 
-		xlims=[0,1]
+		#xlims=[0,1]
 
 
 
@@ -327,6 +327,10 @@ begin
 			label=["" "" "" "" "" "" "" L"$p_i < 0$ (kW)"],
 		)
 	xlabel!(L"Power Factor $\quad \alpha_i$")
+	title!(L"q(p|\alpha) = K(\alpha) p, \quad p(q|\alpha) = K^{-1}(\alpha) q")
+	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend.pdf")
+	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend.png")
+	
 end
 
 # ╔═╡ a5954d2b-6f96-4c4a-9bf4-5039dd960039
