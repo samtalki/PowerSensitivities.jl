@@ -1,3 +1,5 @@
+The goal of this package is to help with differentiating electric power system data and studying the results.
+
 This package is under development.
 
 ## Installation
