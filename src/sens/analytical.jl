@@ -35,6 +35,7 @@
 
 using PowerModels
 using LinearAlgebra
+using DifferentialEquations
 
 abstract type Sensitivities end
 abstract type VoltageSensitivities <: Sensitivities end
@@ -48,6 +49,71 @@ struct VoltageMagnitudeSensitivities <: VoltageSensitivities
 	p::AbstractMatrix
 	q::AbstractMatrix
 end
+
+"""
+Given a network data dict, constructs the ODEs for voltage phasor sensitivities
+"""
+function calc_vf_sensitivites!(data::Dict)
+	"""
+	Equations for the voltage phasor-power differential equations
+	∂v/∂p
+	"""
+	
+	function vf_sens_active(dv,v_rect,Y,p)
+		dv,dv_conj = dv
+		v,v_conj = v_rect
+		for i in 1:n_bus
+			yit = Y[i,:]
+			for l in 1:n_bus
+				indi = i==l ? 1 : 0 #Indicator function 
+				sl = dot(yit,v_conj) #power
+				dv_conj[i,l] = (1/sl)*(indi - v[i]*(dot(yit,dv[:,l])))
+			end
+		end
+	end
+	"""
+	∂v/∂q
+	"""
+	function vf_sens_reactive(dv,dv_conj,v,Y,q)
+		for i in 1:n_bus
+			yit = Y[i,:]
+			for l in 1:n_bus
+				indi = i==l ? -im : 0 #Indicator function 
+				sl = dot(yit,v_conj) #power
+				dv_conj[i,l] = (1/sl)*(indi - v[i]*(dot(yit,dv[:,l])))
+			end
+		end
+	end
+
+	#Prepare problem data
+	n_bus = length(data["bus"])
+	compute_ac_pf!(data)
+	Y = calc_basic_admittance_matrix(data)
+	
+	#Prepare voltage
+	v = calc_basic_bus_voltage(data)
+	v₀ = (v,conj(v))
+	vspan = (0.95,1.05)
+
+	#Prepare power
+	s₀ = calc_basic_bus_injection(data)
+	p₀,q₀ = real.(s₀),imag.(s₀)
+	p_min,p_max = minimum(p₀),maximum(p₀)
+	q_min,q_max = minimum(q₀),maximum(q₀)
+	p_span = (p_min,p_max)
+	q_span = (q_min,q_max)
+
+	#Prepare problem
+	sens_active_prob = ODEProblem(vf_sens_active,v₀,p_span,Y)
+	sens_reactive_prob = ODEProblem(vf_sens_reactive,v₀,q_span,Y)
+	∂vp,∂vq = solve(sens_active_prob),solve(sens_reactive_prob)
+	
+	return ∂vp,∂vq
+end
+	
+
+
+
 
 #--- Voltage phasor sensitivities
 
@@ -77,7 +143,7 @@ function calc_vmag_sensitivities(data::Dict{String,<:Any})
 	vf = calc_basic_bus_voltage(data)
 	∂vf = calc_vf_sensitivites(Y,vf)
 	∂v = calc_vmag_sensitivities(∂vf)
-	return calc_vmag_sensitivities(Y,vf)
+	return ∂v
 end
 function calc_vmag_sensitivities(∂vf::VoltagePhasorSensitivities)
 	∂vf∂p,∂vf∂q = ∂vf.p,∂vf.q
