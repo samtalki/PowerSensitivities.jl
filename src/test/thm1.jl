@@ -168,7 +168,7 @@ end
 Given a network data dict,
 Calculate the overall Theorem 1 data with automatically chosen study indeces.
 """
-function calc_thm1_data(network::Dict{String,<:Any},sel_bus_types=[1],ϵ=1e-6)
+function calc_thm1_data(network::Dict,sel_bus_types=[1],ϵ=1e-6)
     #Compute the indeces that will be considered
     bad_idx = PowerSensitivities.calc_bad_idx(network,ϵ)
     idx_sel_bus_types = PowerSensitivities.calc_bus_idx_of_type(network,sel_bus_types)

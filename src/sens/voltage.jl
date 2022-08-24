@@ -30,8 +30,8 @@ function calc_voltage_sensitivity_matrix(network::Dict{String,<:Any})
     return calc_voltage_sensitivity_matrix(J)
 end
 
-function calc_voltage_sensitivity_matrix(network::Dict{String,<:Any},sel_bus_types::Union{Vector,Set})
-    J = calc_basic_jacobian_matrix(network,sel_bus_types) #Make the jacobian matrix
+function calc_voltage_sensitivity_matrix(network::Dict{String,<:Any},sel_bus_types::Union{AbstractArray,Set})
+    J = calc_jacobian_matrix(network,sel_bus_types).matrix #Make the jacobian matrix
     n_bus = length(calc_bus_idx_of_type(network,sel_bus_types))
     @assert size(J) == (2*n_bus,2*n_bus) #Check dims
     return calc_voltage_sensitivity_matrix(J)
@@ -42,7 +42,7 @@ end
 Given a network data dict, and sel_bus_types ⊂{1,2,3}:
 Calculate power flow Jacobian block ∂p/∂v  
 """
-function calc_pv_jacobian(network::Dict{String,<:Any},sel_bus_types::Union{Vector,Set})
+function calc_pv_jacobian(network::Dict{String,<:Any},sel_bus_types::Union{AbstractArray,Set})
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
     ∂p∂v = calc_pv_jacobian(network)
     return ∂p∂v[idx_sel_bus_types,idx_sel_bus_types]
@@ -79,7 +79,7 @@ end
 Given a network data dict, and sel_bus_types ⊂{1,2,3}:
 Calculate power flow Jacobian block ∂p/∂v  
 """
-function calc_qv_jacobian(network::Dict{String,<:Any},sel_bus_types::Union{Vector,Set})
+function calc_qv_jacobian(network::Dict{String,<:Any},sel_bus_types::Union{AbstractArray,Set})
     idx_sel_bus_types = calc_bus_idx_of_type(network,sel_bus_types)
     ∂q∂v = calc_qv_jacobian(network)
     return ∂q∂v[idx_sel_bus_types,idx_sel_bus_types]
