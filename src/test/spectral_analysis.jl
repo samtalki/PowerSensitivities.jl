@@ -106,9 +106,8 @@ end
 
 
 #--- Initalize Parameters
-radial_only = true
-include_industry = false
-include_academic = true #Boolean on whether to include the academic radial cases or not
+include_industry = true
+include_academic = false #Boolean on whether to include the academic radial cases or not
 #plots = [] # plots
 
 #- paths and names
@@ -127,6 +126,10 @@ if include_industry==true && include_academic==true
 elseif include_industry==false && include_academic==true
     paths,names = default_paths,default_names
 else
-    paths,names = large_scale_paths,default_paths
+    paths,names = large_scale_paths,large_scale_names
     
 end
+
+plt = plot_spectral_analysis(paths,names)
+savefig(plt,"figures/spring_22/spectral_analysis/large_scale_spectral.pdf")
+savefig(plt,"figures/spring_22/spectral_analysis/large_scale_spectral.png")

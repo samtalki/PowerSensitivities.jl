@@ -41,7 +41,7 @@ export VoltageSensitivityMatrix
 export calc_voltage_sensitivity_matrix
 #- Spectral Analysis utilities
 export SpectralAnalysis
-export calc_spectral_analysis
+export calc_spectral_analysis,calc_condition_number
 
 #--- Network data utilities
 export make_ami_dataset,make_timeseries_dataset,calc_finite_differences

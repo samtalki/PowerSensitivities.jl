@@ -2,6 +2,7 @@
 # include("jacobian_matrix.jl")
 # include("../sens/voltage.jl")
 # using LinearAlgebra
+using LinearAlgebra:cond
 
 """
 Spectral analysis struct
@@ -45,6 +46,27 @@ function calc_spectral_analysis(net::Dict{String,<:Any})
         "svq"=>Svq_spec
         )
 end
+
+function calc_condition_number(net::Dict)
+    S = calc_voltage_sensitivity_matrix(net)
+    Svp,Svq = S.vp,S.vq
+    κ_vp,κ_vq = con(Svp),con(Svq)
+    return [κ_vp,κ_vq]
+end
+
+function calc_condition_number(net::Dict,sel_bus_types=[1])
+    S = calc_voltage_sensitivity_matrix(net,sel_bus_types)
+    Svp,Svq = S.vp,S.vq
+    κ_vp,κ_vq = con(Svp),con(Svq)
+    return [κ_vp,κ_vq]
+end 
+
+function calc_condition_number(file::String)
+    net = make_basic_network(parse_file(path))
+    return calc_condition_number(net)
+end 
+
+
 
 # function calc_spectral_analysis(J::PowerFlowJacobian)
 #     Jpv,Jqv = J.pv, J.qv
