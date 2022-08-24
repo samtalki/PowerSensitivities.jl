@@ -36,6 +36,7 @@
 using PowerModels
 using LinearAlgebra
 using DifferentialEquations
+import PowerSensitivities as PS
 
 abstract type Sensitivities end
 abstract type VoltageSensitivities <: Sensitivities end
@@ -50,38 +51,79 @@ struct VoltageMagnitudeSensitivities <: VoltageSensitivities
 	q::AbstractMatrix
 end
 
+
+
+#--- Voltage phasor sensitivities
+function calc_vf_sensitivities(data::Dict{String,<:Any})
+	compute_ac_pf!(data)
+	M = calc_basic_incidence_matrix(data)
+	vf = calc_basic_bus_voltage(data)
+	Y = Matrix(calc_basic_admittance_matrix(data)) #Admittance matrix
+	Z = inv(Y) #Impedance matrix
+
+	pq_bus_idx = PS.calc_bus_idx_of_type(data,[1])
+	Y_pq = Y[pq_bus_idx, pq_bus_idx]
+	vf_pq = vf[pq_bus_idx]
+	return calc_vf_sensitivities(Y,vf,Y_pq,vf_pq)
+end
+
+function calc_vf_sensitivities(M::AbstractMatrix,Z::AbstractMatrix,v::AbstractArray)
+	R,X = real.(Z),imag.(Z) #Voltage 
+	∂vp = []
+	∂vq = []
+	for (i,z_i) in enumerate(eachrow(Z))
+		for (j,z_ij) in enumerate(z_i)
+			r_ij,x_ij = real(z_ij),imag(z_ij)
+			
+			
+		end
+	end
+end
+
+function calc_vf_sensitivities(Y::AbstractArray,vf::AbstractArray,Y_pq::AbstractMatrix,vf_pq::AbstractArray)
+	n = size(Y,1)
+	#Solve Ax = b for every injection location
+	A = [Diagonal(Y_pq* vf_pq) Diagonal(conj.(vf_pq))*Y_pq;
+		-1*Diagonal(Y_pq*vf_pq) Diagonal(conj.(vf_pq))*Y_pq
+	]
+	B = [diagm(ones(n));diagm(ones(n))] 
+	return inv(Matrix(A))*B
+end
+
+
 """
 Given a network data dict, constructs the ODEs for voltage phasor sensitivities
 """
-function calc_vf_sensitivites!(data::Dict)
+function make_vf_sensitivities_diffeq(data::Dict)
 	"""
 	Equations for the voltage phasor-power differential equations
-	∂v/∂p
+	∂v/∂pₗ for a given l ∈ N
 	"""
-	
-	function vf_sens_active(dv,v_rect,Y,p)
-		dv,dv_conj = dv
-		v,v_conj = v_rect
+	function vf_sens_active(dv,v₀,params,p)
+		Y,l = params
+		n_bus = size(Y,1)
+		v,v_conj = v₀[1:n_bus],v₀[n_bus+1:end]
+		#dv_conj = conj.(dv)
 		for i in 1:n_bus
 			yit = Y[i,:]
-			for l in 1:n_bus
-				indi = i==l ? 1 : 0 #Indicator function 
-				sl = dot(yit,v_conj) #power
-				dv_conj[i,l] = (1/sl)*(indi - v[i]*(dot(yit,dv[:,l])))
-			end
+			indi = i==l ? 1 : 0 #Indicator function 
+			sl = dot(yit,v_conj) #power
+			dv[i+n_bus] = (1/sl)*(indi - v[i]*(dot(yit,dv[1:n_bus])))
 		end
 	end
 	"""
-	∂v/∂q
+	∂v/∂qₗ
 	"""
-	function vf_sens_reactive(dv,dv_conj,v,Y,q)
+	function vf_sens_reactive(dv,v₀,params,q)
+		Y,l = params
+		n_bus = size(Y,1)
+		v,v_conj = v₀[1:n_bus],v₀[n_bus+1:end]
+		#dv_conj = conj.(dv)
 		for i in 1:n_bus
 			yit = Y[i,:]
-			for l in 1:n_bus
-				indi = i==l ? -im : 0 #Indicator function 
-				sl = dot(yit,v_conj) #power
-				dv_conj[i,l] = (1/sl)*(indi - v[i]*(dot(yit,dv[:,l])))
-			end
+			indi = i==l ? -im : 0 #Indicator function 
+			sl = dot(yit,v_conj) #power
+			dv[i+n_bus] = (1/sl)*(indi - v[i]*(dot(yit,dv[1:n_bus])))
 		end
 	end
 
@@ -92,7 +134,7 @@ function calc_vf_sensitivites!(data::Dict)
 	
 	#Prepare voltage
 	v = calc_basic_bus_voltage(data)
-	v₀ = (v,conj(v))
+	v₀ = [v ; conj(v)]
 	vspan = (0.95,1.05)
 
 	#Prepare power
@@ -104,37 +146,16 @@ function calc_vf_sensitivites!(data::Dict)
 	q_span = (q_min,q_max)
 
 	#Prepare problem
-	sens_active_prob = ODEProblem(vf_sens_active,v₀,p_span,Y)
-	sens_reactive_prob = ODEProblem(vf_sens_reactive,v₀,q_span,Y)
-	∂vp,∂vq = solve(sens_active_prob),solve(sens_reactive_prob)
-	
+	∂vp,∂vq = [],[] #Arrays for storing results
+	for l in 1:n_bus
+		params = (Y,l)
+		sens_active_prob = ODEProblem(vf_sens_active,v₀,p_span,params)
+		sens_reactive_prob = ODEProblem(vf_sens_reactive,v₀,q_span,params)
+		push!(∂vp,solve(sens_active_prob))
+		push!(∂vq,solve(sens_reactive_prob))
+	end
 	return ∂vp,∂vq
 end
-	
-
-
-
-
-#--- Voltage phasor sensitivities
-
-function calc_vf_sensitivities(data::Dict{String,<:Any})
-	compute_ac_pf!(data)
-	Y = calc_basic_admittance_matrix(data)
-	vf = calc_basic_bus_voltage(data)
-	return calc_vf_sensitivites(Y,vf)
-end
-function calc_vf_sensitivites(Y::AbstractArray,vf::AbstractArray)
-	n = size(Y,1)
-	B = [diagm(ones(n)) zeros((n,n)); zeros((n,n)) -1*diagm(ones(n))*im] 
-	A =  [Y*diagm(conj.(vf)) Y*diagm(vf); Y*diagm(vf) Y*diagm(conj.(vf))] 
-	#B = X A
-	X = B * inv(A)
-	Xre = X[:,1:n]
-	#non-conj phasor voltage sensitivities
-	∂vf∂p, ∂vf∂q = Xre[1:n,1:n],Xre[n+1:end,n+1:end] 
-	return VoltagePhasorSensitivities(∂vf∂p,∂vf∂q) 
-end
-
 #--- Voltage magnitude sensitivities
 
 function calc_vmag_sensitivities(data::Dict{String,<:Any})
