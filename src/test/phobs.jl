@@ -29,14 +29,68 @@ struct ObservabilityData
 	observable::Bool
 end
 
-function test_observability(data::Dict{String,<:Any})
+function calc_thm2_data(data::Dict,sel_bus_types=[1])
 	K = PowerSensitivities.calc_K_matrix(data)
+	pf = PowerSensitivities.calc_basic_power_factor(data)
 	S = PowerSensitivities.calc_voltage_sensitivity_matrix(data)
+	#dimensionality setup
+	bus_idx_sel_type = PowerSensitivities.calc_bus_idx_of_type(data,sel_bus_types)
+	n_bus_sel_type = length(bus_idx_sel_type)
+	n_bus = length(pf)
+
 	@assert size(K) == size(S.vp) == size(S.vq) "Mismatch in sensitivity dimensions"
+	@assert n_bus == size(K,1) == size(K,2)
+	
+	#Truncate the test matrices to choose only the selected bus types
+	pf = pf[bus_idx_sel_type]
+	K = K[bus_idx_sel_type,bus_idx_sel_type]
+	Svp,Svq = S.vp[bus_idx_sel_type,bus_idx_sel_type],S.vq[bus_idx_sel_type,bus_idx_sel_type]
+
+	#Test values
+	K_min,K_max = minimum(diag(K)),maximum(diag(K))
 	
 	#Test matrices
-	A = S.vp + S.vq*K
-	B = S.vp*inv(K) + S.vq
+	A = Svp + Svq*K
+	B = Svp*inv(K) + Svq
+	is_observable = isinvertible(A) || isinvertible(B)
+	#is_observable = eigmin(A)>0 || eigmin(B)>0#Test
+	return Dict(
+		"A" => A,
+		"B" => B,
+		"is_observable" => is_observable,
+		"K" => K,
+		"pf" => pf,
+		"S" => S,
+	)
+end
+
+function test_observability(data::Dict{String,<:Any},sel_bus_types=[1])
+	K = PowerSensitivities.calc_K_matrix(data)
+	pf = PowerSensitivities.calc_basic_power_factor(data)
+	S = PowerSensitivities.calc_voltage_sensitivity_matrix(data)
+	
+	#dimensionality setup
+	bus_idx_sel_type = PowerSensitivities.calc_bus_idx_of_type(data,sel_bus_types)
+	n_bus_sel_type = length(bus_idx_sel_type)
+	n_bus = length(pf)
+
+	@assert size(K) == size(S.vp) == size(S.vq) "Mismatch in sensitivity dimensions"
+	@assert n_bus == size(K,1) == size(K,2)
+	
+	#Truncate the test matrices to choose only the selected bus types
+	pf = pf[bus_idx_sel_type]
+	K = K[bus_idx_sel_type,bus_idx_sel_type]
+	Svp,Svq = S.vp[bus_idx_sel_type,bus_idx_sel_type],S.vq[bus_idx_sel_type,bus_idx_sel_type]
+
+	#Test values
+	K_min,K_max = try 
+		minimum(diag(K)),maximum(diag(K))
+	catch
+		nothing,nothing
+	end
+	#Test matrices
+	A = Svp + Svq*K
+	B = Svp*inv(K) + Svq
 	is_observable = try
 		eigmin(A)>0 || eigmin(B)>0#Test
 	catch
@@ -44,13 +98,25 @@ function test_observability(data::Dict{String,<:Any})
 	end
 	#is_observable = is_pos_def(A) || is_pos_def(B)
 	if is_observable
-		return ObservabilityData(
-			eigmin(A),
-			eigmin(B),A,B,K,
-			S.vp,S.vq,is_observable
+		return Dict(
+			"eigmin_A" => eigmin(A),
+			"eigmin_B" => eigmin(B),
+			"eigs_A" => eigvals(A),
+			"eigs_B" => eigvals(B),
+			"A"=>A,
+			"B"=>B,
+			"K"=>K,
+			"K_invertible"=>isinvertible(K),
+			"svp"=>Svp,
+			"svq"=>Svq,
+			"is_observable"=>is_observable,
+			"pf_min"=> minimum(pf),
+			"pf_max"=> maximum(pf),
+			"k_min" => K_min,
+			"k_max" => K_max,
 			)
 	else
-		return false
+		return nothing
 	end
 end
 
@@ -84,11 +150,19 @@ function plot_eigvals(data::Dict{String,<:Any})
 	B = S.vp*inv(K) + S.vq
 
 	pA = plot_eigvals(A)
-	title!(L"$\text{eigs} \frac{\partial v}{\partial p} + \frac{\partial v}{\partial q} K$")
+	title!(L"$\operatorname{eigs}\left(\frac{\partial v}{\partial p} + \frac{\partial v}{\partial q} K \right)$")
 	pB = plot_eigvals(B)
-	title!(L"$\text{eigs}\frac{\partial v}{\partial p} K^{-1} + \frac{\partial v}{\partial q}$")
+	title!(L"$\operatorname{eigs}\left(\frac{\partial v}{\partial p} K^{-1} + \frac{\partial v}{\partial q} \right)$")
 	p = plot(pA,pB)
 	return p
+end
+
+function plot_eigvals(d::ObservabilityData)
+	λA,λB = eigvals(d.A),eigvals(d.B)
+	plot_A = plot_eigvals(d.A)
+	plot_B = plot_eigvals(d.B)
+	p = plot(plot_A,plot_B)
+	return p 
 end
 
 function plot_eigvals!(data::Dict{String,<:Any})
@@ -111,70 +185,16 @@ function plot_eigvals(A::AbstractMatrix;sorted=true)
 	return plot(λ,xlabel="Bus Index",ylabel="Eigenvalue")
 end
 
-#########
-#Radial cases
-#Test case path and parameters
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/" #Folder with radial-only systems
-names = readdir(network_data_path);
-paths = readdir(network_data_path,join=true);
 
-begin
-		
-	#Results dicts for automatic indexing.
-	#PQ bus only, unsuitable indexes removed.
-	results = Dict()
-
-	#Eigenvalue and other plots
-	plots = Dict()
-
-	#Save PowerModels networks
-	radial_network_dicts = Dict() 
-
-	# """
-	# Radial cases
-	# Test case path and parameters
-	# """
-	for (name,path) in zip(names,paths)
-	    network =  try
-	        make_basic_network(parse_file(path));
-	    catch
-	        println("PM cannot parse "*name)
-	        continue
-	    end
-	    if PowerSensitivities.is_radial(network)
-	        try  ### Compute the AC power flow solution first!
-	            compute_ac_pf!(network)  
-	        catch
-	            println("AC Power Flow solution failed for: ",name)
-	            continue
-	        end
-
-	        #Check observable
-            results[name] = test_observability(network)
-            
-            #Plot eigenvalues
-            plots[name] = plot_eigvals(network)
-			try
-				savefig(plots[name],"/home/sam/github/PowerSensitivities.jl/figures/spring_22/ph_observability/" * name[1:end-2]*"_eigplot.pdf")
-				savefig(plots[name],"/home/sam/github/PowerSensitivities.jl/figures/spring_22/ph_observability/" * name[1:end-2]*"_eigplot.png")		
-			catch
-				continue
-			end
-			
-            #Save network
-            radial_network_dicts[name] = network
-	    end
+"""
+Given dict of results dicts and key(s), print the value of each dict at that key
+"""
+function sample_results(key::String,results_dicts_dict::Dict)
+	for (name,d) in results_dicts_dict
+		try
+			println(name*": "*String(d[key]))
+		catch
+			continue
+		end
 	end
-
 end
-
-
-# #----- Plots
-
-# begin
-	
-# 	for (name,path) in zip(names,paths)
-# 		plot_eigvals()
-
-# 	end
-# end
