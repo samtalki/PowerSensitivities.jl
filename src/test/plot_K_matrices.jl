@@ -1,55 +1,101 @@
-import PowerModels as PM
-using Plots,LaTeXStrings
+using PowerModels
+PowerModels.silence()
+using Plots
+using LaTeXStrings
 theme(:dao)
 using LinearAlgebra
 using DataFrames
 using PowerSensitivities
 
-"""
-Given a network data dict plot a single 1x2 subplot plot of the q->p and p->q encoding
-"""
-function plot_network_encoding(network::Dict{String,<:Any},pf_range=(0,1))
-    #gr()
+#--- Quandrant functions
+is_q1(x,y) = x> 0 && y> 0 ? true : false
+is_q2(x,y) = x<0 && y>0 ? true : false
+is_q3(x,y) = x<0 && y<0 ? true : false
+is_q4(x,y) = x>0 && y<0 ? true : false
+
+q1(x,y) = x>0 && y>0 ? (x,y) : nothing
+q2(x,y) = x<0 && y>0 ? (x,y) : nothing
+q3(x,y) = x<0 && y<0 ? (x,y) : nothing
+q4(x,y) = x>0 && y<0 ? (x,y) : nothing
+
+quadrant_funs = [q1,q2,q3,q4]
+
+inductive(q) = [i for (i,q_i) in enumerate(q) if q_i<0]
+capacitive(q) = [i for (i,q_i) in enumerate(q) if q_i>0]
+
+
+function calc_plot_params(network)
+    #Compute all of the relevant indeces
+    bad_idx = calc_bad_idx(network)
+    #good_idx = [i for i in 1:length(network["bus"]) if i ∉ bad_idx] 
+    good_idx = [i for i in 1:length(network["bus"])]
+    q = imag.(calc_basic_bus_injection(network)[good_idx]) #Compute the reactive power injective
+    cap_idx,ind_idx = capacitive(q),inductive(q)
 
     #calculate the parameters to be ploted
-    pf = calc_basic_power_factor(network)
-    K = calc_K_matrix(network)
+    K = calc_K_matrix(network)[good_idx,good_idx]
     Kinv = inv(K)
+    pf = calc_basic_power_factor(network)[good_idx]
+    return K,Kinv,pf,bad_idx,good_idx,q,cap_idx,ind_idx
+end
 
-    #Plot Q->P matrix values
-    active = plot(
-        pf,diag(K),
-        color_palette = palette(:Greens),
+
+"""
+Given a network data dict plot 2 single 2x2 subplot plots of the q->p and p->q encoding in each quadrant.
+"""
+function plot_network_encodings(network::Dict{String,<:Any})
+    K,Kinv,pf,bad_idx,good_idx,q,cap_idx,ind_idx = calc_plot_params(network)
+    #Plot 1: Q-P Matrix values (K)
+    #Inductive
+    K_ind_plot = plot(
+        pf[ind_idx],Diagonal(K)[ind_idx],
+        color_palette = palette(:Greens,rev=true),
         label=L"$K(\alpha_i)$",
-        seriestype = :scatter
+        seriestype = :scatter,
+        title=L"$\mathbf{K}$ Entries at inductive buses $(q_i<0)$",
+        #xlabel=L"Bus power factor $\alpha_i$",
+        ylabel=L"$K_{ii} = \pm \frac{1}{\alpha_i} \sqrt{1-\alpha_i^2}$"
         )
-
-
-
-    plot!(pf,-1*diag(K),
-        color_palette = palette(:Greens),
-        label=L"$-K(\alpha_i)$",
-        seriestype = :scatter)
-    xlabel!(L"Bus Power Factor $\alpha_i$")
-    ylabel!(L"$K_{ii} = \pm \frac{1}{\alpha_i} \sqrt{1-\alpha_i^2}$")
-    
-    #Plot P->Q matrix values
-    reactive = plot(pf,diag(Kinv),
-        color_palette = palette(:Oranges),
+    #Capacitive
+    K_cap_plot = plot(
+        pf[cap_idx],Diagonal(K)[cap_idx],
+        color_palette = palette(:Oranges,rev=true),
+        label=L"$K(\alpha_i)$",
+        seriestype = :scatter,
+        title=L"$\mathbf{K}$ Entries at capacitive buses $(q_i>0)$",
+        xlabel=L"Bus power factor $\alpha_i$",
+        #ylabel=L"$K_{ii} = \pm \frac{1}{\alpha_i} \sqrt{1-\alpha_i^2}$"
+        )
+    #Plot2: Inverse K plot
+    #Inductive
+    Kinv_ind_plot = plot(
+        pf[ind_idx],Diagonal(Kinv)[ind_idx],
+        color_palette = palette(:Greens,rev=true),
         label=L"$K^{-1}(\alpha_i)$",
-        seriestype = :scatter)
-    plot!(pf,-1*diag(Kinv),
-        color_palette = palette(:Oranges),
-        label=L"$-K^{-1}(\alpha_i)$",
-        seriestype = :scatter)
-    xlabel!(L"Power Factor $\alpha_i$")
-    ylabel!(L"$K^{-1}_{ii} = \pm \frac{\alpha_i}{\sqrt{1-\alpha_i^2}}$")
-    
-    #Plot them together in subplots
-    #ylabel!(L"Active Power $p_i(q_i;\alpha_i)")
-    plt = plot(active,reactive)
-    
+        seriestype = :scatter,
+        title=L"Inductive buses, $q_i<0$",
+        #xlabel=L"Bus power factor $\alpha_i$",
+        ylabel=L"$K^{-1}_{ii} = \pm \alpha_i (1- \alpha_i^2)^{-1/2}$"
+    )
+    Kinv_cap_plot = plot(
+        pf[cap_idx],Diagonal(Kinv)[cap_idx],
+        color_palette = palette(:Oranges,rev=true),
+        label=L"$K^{-1}(\alpha_i)$",
+        seriestype = :scatter,
+        title=L"Capacitive buses, $q_i>0$",
+        xlabel=L"Bus power factor $\alpha_i$",
+        #ylabel=L"$K^{-1}_{ii} =\pm \alpha_i (1- \alpha_i^2)^{-1/2}$"
+    )
+    plt = plot(K_ind_plot,K_cap_plot,Kinv_ind_plot,Kinv_cap_plot)
     return plt
+end
+
+"""
+Given a network data dict plot all the encodings on one plot
+"""
+function plot_network_encoding(network::Dict)
+    K,Kinv,pf,bad_idx,good_idx,q,cap_idx,ind_idx = calc_plot_params(network)
+    
 end
 
 function test_power_encodings(network)
@@ -72,29 +118,26 @@ function compute_power_encodings(network)
 end
 
 
-function plot_network_encoding!(network::Dict{String,<:Any},pf_range=(0,1))
+function plot_network_encodings!(network::Dict{String,<:Any})
     compute_ac_pf!(network)
-    return plot_network_encoding(network,pf_range)
+    return plot_network_encodings(network)
 end
+
+
 
 #----
 
-function make_network_encoding_dataframe(network::Dict)
-    n_bus = length(nethwork["bus"])
-    name = network["case_name"]
-end
+begin
+    network_data_path = "/home/sam/github/PowerSensitivities.jl/data/figure_cases/" #Folder with radial-only systems
+    network_names = readdir(network_data_path);
+    paths = readdir(network_data_path,join=true);
 
 
+    plots = [] 
 
-"""
-Given a path to network models, plot all the embedding matrices on a polar plot together
-"""
-function plot_all_case_encodings(network_path="/home/sam/github/PowerSensitivities.jl/data/figure_cases/")
-    names = readdir(network_path);
-    paths = readdir(network_path,join=true);
     Ks,Kinvs = Dict(),Dict()
-    plt_K,plt_inv_K = plot(),plot()
-    for (name,path) in zip(names,paths)
+
+    for (name,path) in zip(network_names,paths)
         network =  try
             make_basic_network(parse_file(path));
         catch
@@ -104,88 +147,96 @@ function plot_all_case_encodings(network_path="/home/sam/github/PowerSensitiviti
         if PowerSensitivities.is_radial(network)
             try  ### Compute the AC power flow solution first!
                 compute_ac_pf!(network)  
-                Ks[name],Kinvs[name] = compute_power_encodings(network) 
-                pf = calc_basic_power_factor(network)
-                
-                plot!(plt_K,
-                    pf,Ks[name],
-                    #label=nothing,
-                    label=name[5:end-2],
-                    #label=L"$K(\alpha)$ "*name,
-                    #color_palette = palette(:Greens),
-                    seriestype = :scatter
-                    )
-                xlabel!(L"Power Factor $\alpha_i$")
-                ylabel!(L"$K_{ii} = \pm \frac{1}{\alpha_i} \sqrt{1-\alpha_i^2}$")
-                plot!(plt_inv_K,
-                    pf,Kinvs[name],
-                    #label=nothing,
-                    label=name[5:end-2],
-                    #label=L"$K^{-1}(\alpha)$ "*name,
-                    #color_palette = palette(:Oranges),
-                    seriestype = :scatter
-                    )
-                xlabel!(L"Power Factor $\alpha_i$")
-                ylabel!(L"$K^{-1}_{ii} = \pm \frac{\alpha_i}{\sqrt{1-\alpha_i^2}}$")
-
-               
             catch
                 println("AC Power Flow solution failed for: ",name)
                 continue
             end
-
+                Ks[name],Kinvs[name] = compute_power_encodings(network)
+                encoding_plot = plot_network_encodings(network)
+                push!(plots,encoding_plot)
+                savefig(encoding_plot,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/K_matrices/" *"K_"* name[1:end-2]*".pdf")
+                savefig(encoding_plot,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/K_matrices/" *"K_"* name[1:end-2]*".png")		
+        
         end
+
+
     end
-    plt = plot(plt_K,plt_inv_K)
-    # for name in names
-    #     #Draw the opnorm
-    #     Ki = Diagonal(Ks[name]) #construct K
-    #     λmax = opnorm(Ki)
-    #     vline(λmax,
-    #         #linewidth=3,ls="dashed"
-    #         )
-    # end
-    return plt
 
 end
 
 
 
-#----
+
+#------------------------------------------------------------------------------------------------------
+
+# function make_network_encoding_dataframe(network::Dict)
+#     n_bus = length(nethwork["bus"])
+#     name = network["case_name"]
+# end
 
 
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/figure_cases/" #Folder with radial-only systems
-names = readdir(network_data_path);
-paths = readdir(network_data_path,join=true);
+# #----
 
+# """
+# Given a path to network models, plot all the embedding matrices on a polar plot together
+# """
+# function plot_all_case_encodings(network_path="/home/sam/github/PowerSensitivities.jl/data/figure_cases/")
+#     network_names = readdir(network_path);
+#     paths = readdir(network_path,join=true);
+#     Ks,Kinvs = Dict(),Dict()
+#     plt_K,plt_inv_K = plot(),plot()
+#     for (name,path) in zip(network_names,paths)
+#         network =  try
+#             make_basic_network(parse_file(path));
+#         catch
+#             println("PM cannot parse "*name)
+#             continue
+#         end
+#         if PowerSensitivities.is_radial(network)
+#             try  ### Compute the AC power flow solution first!
+#                 compute_ac_pf!(network)  
+#                 Ks[name],Kinvs[name] = compute_power_encodings(network) 
+#                 pf = calc_basic_power_factor(network)
+                
+#                 plot!(plt_K,
+#                     pf,Ks[name],
+#                     #label=nothing,
+#                     label=name[5:end-2],
+#                     #label=L"$K(\alpha)$ "*name,
+#                     #color_palette = palette(:green),
+#                     seriestype = :scatter
+#                     )
+#                 xlabel!(L"Power Factor $\alpha_i$")
+#                 ylabel!(L"$K_{ii} = \pm \frac{1}{\alpha_i} \sqrt{1-\alpha_i^2}$")
+#                 plot!(plt_inv_K,
+#                     pf,Kinvs[name],
+#                     #label=nothing,
+#                     label=name[5:end-2],
+#                     #label=L"$K^{-1}(\alpha)$ "*name,
+#                     #color_palette = palette(:ss),
+#                     seriestype = :scatter
+#                     )
+#                 xlabel!(L"Power Factor $\alpha_i$")
+#                 ylabel!(L"$K^{-1}_{ii} = \pm \frac{\alpha_i}{\sqrt{1-\alpha_i^2}$")
 
-plots = [] 
+               
+#             catch
+#                 println("AC Power Flow solution failed for: ",name)
+#                 continue
+#             end
 
-Ks,Kinvs = Dict(),Dict()
+#         end
+#     end
+#     plt = plot(plt_K,plt_inv_K)
+#     # for name in network_names
+#     #     #Draw the opnorm
+#     #     Ki = Diagonal(Ks[name]) #construct K
+#     #     λmax = opnorm(Ki)
+#     #     vline(λmax,
+#     #         #linewidth=3,ls="dashed"
+#     #         )
+#     # end
+#     return plt
 
-for (name,path) in zip(names,paths)
-    network =  try
-        make_basic_network(parse_file(path));
-    catch
-        println("PM cannot parse "*name)
-        continue
-    end
-    if PowerSensitivities.is_radial(network)
-        try  ### Compute the AC power flow solution first!
-            compute_ac_pf!(network)  
-        catch
-            println("AC Power Flow solution failed for: ",name)
-            continue
-        end
-            Ks[name],Kinvs[name] = compute_power_encodings(network)
-            encoding_plot = plot_network_encoding(network)
-            #Add title
-            title!(name)
-            push!(plots,encoding_plot)
-            savefig(encoding_plot,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/K_matrices/" *"K_"* name[1:end-2]*".pdf")
-            savefig(encoding_plot,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/K_matrices/" *"K_"* name[1:end-2]*".png")		
-    
-    end
+# end
 
-
-end

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.4
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -194,7 +194,7 @@ end
 begin
 	k_inv(alpha) = alpha ./ (sqrt.(1 .- alpha.^2))
 	p(alpha,q) = k_inv.(alpha) .* q
-	pfs_test = -1:0.001:1
+	pfs_test = 0:0.001:1
 	qs = [1 5 15 20 30 40 60 80]
 	#p_data = [p(q,pfs_test) for q in qs]
 	p_data = [p(pfs_test,qs[1]) p(pfs_test,qs[2]) p(pfs_test,qs[3]) p(pfs_test,qs[4]) p(pfs_test,qs[5]) p(pfs_test,qs[6]) p(pfs_test,qs[7]) p(pfs_test,qs[8])]
@@ -204,9 +204,9 @@ end
 # ╔═╡ 35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
 begin
 	#Range of power factors
-	α = -1:0.001:1
-	ps = [1 5 15 20 30 40 60 80]
-	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5]) q(α,ps[6]) q(α,ps[7]) q(α,ps[8])]
+	α = 0:0.001:1
+	ps = [1 5 15 20 30 40 60 80 100]
+	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5]) q(α,ps[6]) q(α,ps[7]) q(α,ps[8]) q(α,ps[9])]
 	capacitive = -1 .* data
 	#labels = [string(p_i) for p_i in ps]
 	#Inductive Plot
@@ -214,7 +214,7 @@ begin
 		α,
 		data,
 		ylims=(-100,100),
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Greens, 10),
 		colorbar=:legend,
 		label=["" "" "" "" "" "" "" L"$q_i > 0$"],
@@ -228,7 +228,7 @@ begin
 		capacitive,
 		ylims=(-100,100),
 		#ls=:dash,
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Oranges, 10),
 		label=["" "" "" "" "" "" "" L"$q_i < 0$"],
 		#legend_title=L"$p_i$ (kW) Inductive",
@@ -239,7 +239,7 @@ begin
 		pfs_test,
 		p_data,
 		ylims=(-100,100),
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Greens, 10),
 		colorbar=:legend,
 		label=["" "" "" "" "" "" "" L"$q_i > 0$"],
@@ -252,7 +252,7 @@ begin
 		-1 .* p_data,
 		ylims=(-100,100),
 		#ls=:dash,
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Oranges, 10),
 		label=["" "" "" "" "" "" "" L"$q_i < 0$"],
 		#legend_title=L"$p_i$ (kW) Inductive",
@@ -268,7 +268,7 @@ begin
 end
 
 
-# ╔═╡ f009769d-4042-4456-9da9-d9e26e1910d5
+# ╔═╡ 2cfc05e3-c5de-480f-a029-e6713d0e0222
 
 
 # ╔═╡ f5394f0b-f02e-4251-8f4e-f1099f9c4e52
@@ -279,57 +279,54 @@ plot_clean=plot(
 		α,
 		data,
 		ylims=(-100,100),
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Greens, 10),
 		colorbar=:legend,
-		label=["" "" "" "" "" "" "" L"$q_i > 0$ (kVAR)"],
+		label=["" "" "" "" "" "" "" L"$q > 0$ (kVAR)"],
 		legend_position=:bottomright,
-		ylabel=L"Reactive Power $q_i$ (kVAR)",
-
-
+		ylabel=L"Reactive Power $q$ (kVAR)",
+		legend=false
 		#xlims=[0,1]
-
-
-
-		
 	)
 	# #Cq_i<0
 	plot!(α,
 		capacitive,
 		ylims=(-100,100),
 		ls=:dash,
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Greens, 10),
-		label=["" "" "" "" "" "" "" L"$q_i < 0$ (kVAR)"],
-
+		label=["" "" "" "" "" "" "" L"$q < 0$ (kVAR)"],
+		legend=false
 	)
-
 #p>0
 	plot!(
 			pfs_test,
 			p_data,
 			ylims=(-100,100),
-			color=[3 4 5 6 7 8 9 10 11],
+			color=[3 4 5 6 7 8 9 10 11 12],
 			color_palette = palette(:Oranges, 10),
 			colorbar=:legend,
-			label=["" "" "" "" "" "" "" L"$p_i > 0$ (kW)"],
+			label=["" "" "" "" "" "" "" L"$p > 0$ (kW)"],
 			legend_position=:bottomright,
-
-			ylabel=L"Power $p_i, \ q_i$ ",
+			legend=false
 		)
 #p<0
 		plot!(pfs_test,
 			-1 .* p_data,
 			ylims=(-100,100),
 			ls=:dash,
-			color=[3 4 5 6 7 8 9 10 11],
+			color=[3 4 5 6 7 8 9 10 11 12],
 			color_palette = palette(:Oranges, 10),
-			label=["" "" "" "" "" "" "" L"$p_i < 0$ (kW)"],
+			label=["" "" "" "" "" "" "" L"$p < 0$ (kW)"],
+			legend=false
 		)
-	xlabel!(L"Power Factor $\quad \alpha_i$")
-	title!(L"q(p|\alpha) = K(\alpha) p, \quad p(q|\alpha) = K^{-1}(\alpha) q")
-	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend.pdf")
-	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend.png")
+	xlabel!(L"Power factor $\alpha$")
+	ylabel!(L"Power $p,q$ (kW,kVAR)")
+	#title!(L"$q(\alpha|p)$, $p(\alpha|q)$")
+	
+	#title!(L"q(p|\alpha) = K(\alpha) p, \quad p(q|\alpha) = K^{-1}(\alpha) q")
+	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend_r2.pdf")
+	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend_r2.png")
 	
 end
 
@@ -342,56 +339,88 @@ begin
 		α,
 		data,
 		ylims=(-100,100),
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Greens, 10),
 		colorbar=:legend,
 		#label=["" "" "" "" "" "" "" L"$q_i > 0$ (kVAR)"],
+		label=["" "" "" "" "" "" "" L"$q > 0$ (Capacitive)"],
 		#legend_position=:bottomright,
-		title=L"$q(p,\alpha) = \pm \frac{p}{\alpha} \sqrt{1- \alpha^2}$",
-		ylabel=L"Reactive Power $q$ (kVAR)",
+		title=L"$\pm p  \ \alpha^{-1} (1- \alpha^2)^{\frac{1}{2}}$",
+		ylabel=L"Reactive $q$ (kVAR)",
+		legend=:bottomright
 	)
 	# #Cq_i<0
 	plot!(α,
 		capacitive,
 		ylims=(-100,100),
 		ls=:dash,
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Greens, 10),
 		#label=["" "" "" "" "" "" "" L"$q_i < 0$ (kVAR)"],
-
+		label=["" "" "" "" "" "" "" L"$q < 0$ (Inductive)"],
+		legend=:bottomright
 	)
-
-		
-	
 #p>0
 	p2= plot(
 			pfs_test,
 			p_data,
 			ylims=(-100,100),
-			color=[3 4 5 6 7 8 9 10 11],
+			color=[3 4 5 6 7 8 9 10 11 12],
 			color_palette = palette(:Oranges, 10),
 			colorbar=:legend,
 			#label=["" "" "" "" "" "" "" L"$q_i > 0$"],
-			legend_position=:bottomright,
+			label=["" "" "" "" "" "" "" L"$p > 0$ (Generating)"],
+			legend_position=:bottomleft,
 
-			title=L"$p(q,\alpha) = \frac{\pm q \alpha}{\sqrt{1-\alpha^2}}$",
+			title=L"$\pm q \  \alpha (1- \alpha^2)^{-\frac{1}{2}}$",
 
-			ylabel=L"Active Power $p$ (kW)",
+			ylabel=L"Active $p$ (kW)",
 		)
 #p<0
 		plot!(pfs_test,
 			-1 .* p_data,
 			ylims=(-100,100),
 			ls=:dash,
-			color=[3 4 5 6 7 8 9 10 11],
+			color=[3 4 5 6 7 8 9 10 11 12],
 			color_palette = palette(:Oranges, 10),
 			#label=["" "" "" "" "" "" "" L"$q < 0$"],
+			label=["" "" "" "" "" "" "" L"$p < 0$ (Absorbing)"],
 		)
 
-	plot(p1,p2,legend=false,xflip=true,yflip=true)
+#Middle plot
+	#pmid = plot(p1,p2)
+
+	plt= plot(
+		p1,p2,
+		#legend=false,
+	)
 	#title!("Graphical Power Factor")
-	xlabel!(L"Power Factor $\alpha$")
+	xlabel!(L"Power factor $\alpha$")
+	#savefig(plt,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/subplot_K_matrix_r2.pdf")
+	#savefig(plt,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/subplot_K_matrix_r2.png")
 end
+
+# ╔═╡ ed9f8e36-3d27-444e-99a2-b563e1c7f8b8
+begin
+	l = @layout [a b ; c]
+	threeway_plot = plot(
+		p1,p2,plot_clean,
+		layout=l,
+		#size=()
+	)
+	xlabel!(L"Power Factor $\alpha$")
+	plot!(
+		size=(600,371),
+		#foreground_color_legend = nothing
+		#bottom_margin=9Plots.mm,
+		#left_margin=9Plots.mm
+	
+	)
+	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/threeway_plot.pdf")
+	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/threeway_plot.png")
+end
+
+
 
 # ╔═╡ 7f314bac-db2c-499a-9616-9dcf49aae961
 
@@ -453,7 +482,7 @@ PowerModels = "~0.19.5"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.7.2"
+julia_version = "1.7.3"
 manifest_format = "2.0"
 
 [[deps.Adapt]]
@@ -635,7 +664,7 @@ uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.8.6"
 
 [[deps.Downloads]]
-deps = ["ArgTools", "LibCURL", "NetworkOptions"]
+deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
 [[deps.DualNumbers]]
@@ -678,6 +707,9 @@ deps = ["ErrorfreeArithmetic", "LinearAlgebra"]
 git-tree-sha1 = "6344aa18f654196be82e62816935225b3b9abe44"
 uuid = "fa42c844-2597-5d31-933b-ebd51ab2693f"
 version = "0.3.1"
+
+[[deps.FileWatching]]
+uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[deps.FiniteDiff]]
 deps = ["ArrayInterface", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays"]
@@ -1567,10 +1599,11 @@ version = "0.9.1+5"
 # ╠═ddcfa7d4-ff56-4835-8822-d2fb9fc622e9
 # ╠═ea33e997-0ec4-451f-af77-450fd12a382c
 # ╠═35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
-# ╠═f009769d-4042-4456-9da9-d9e26e1910d5
+# ╠═2cfc05e3-c5de-480f-a029-e6713d0e0222
 # ╠═f5394f0b-f02e-4251-8f4e-f1099f9c4e52
 # ╠═a5954d2b-6f96-4c4a-9bf4-5039dd960039
 # ╠═28c24fd0-1375-4763-856f-fab3c496ea86
+# ╠═ed9f8e36-3d27-444e-99a2-b563e1c7f8b8
 # ╠═7f314bac-db2c-499a-9616-9dcf49aae961
 # ╠═ac48dadf-533f-4178-b99b-b4d6395dc80d
 # ╠═111218b9-05f9-47c4-9467-17f38fc4e012
