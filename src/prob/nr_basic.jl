@@ -1,3 +1,33 @@
+# BSD 3-Clause License
+
+# Copyright (c) 2022, Samuel Talkington
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import PowerModels as PM
 import LinearAlgebra as LA
 
@@ -197,84 +227,3 @@ function update_injection_state!(data::Dict{String,<:Any},x::AbstractVector)
     return data
 end
 
-
-"""
-given a basic network data dict, returns a sparse real valued Jacobian matrix
-of the ac power flow problem.  The power variables are ordered by p and then q
-while voltage values are ordered by voltage angle and then voltage magnitude.
-"""
-function calc_differentiable_jacobian_matrix(data::Dict{String,<:Any})
-    num_bus = length(data["bus"])
-    v = calc_differentiable_bus_voltage(data)
-    vm, va = abs.(v), angle.(v)
-    Y = PM.calc_basic_admittance_matrix(data)
-    neighbors = [Set{Int}([i]) for i in 1:num_bus]
-    I, J, V = findnz(Y)
-    for nz in eachindex(V)
-        push!(neighbors[I[nz]], J[nz])
-        push!(neighbors[J[nz]], I[nz])
-    end
-    J0_I = []
-    J0_J = []
-    J0_V = []
-    for i in 1:num_bus
-        f_i_r = i
-        f_i_i = i + num_bus
-        for j in neighbors[i]
-            x_j_fst = j + num_bus
-            x_j_snd = j
-            push!(J0_I, f_i_r); push!(J0_J, x_j_fst); push!(J0_V, 0.0)
-            push!(J0_I, f_i_r); push!(J0_J, x_j_snd); push!(J0_V, 0.0)
-            push!(J0_I, f_i_i); push!(J0_J, x_j_fst); push!(J0_V, 0.0)
-            push!(J0_I, f_i_i); push!(J0_J, x_j_snd); push!(J0_V, 0.0)
-        end
-    end
-    J = sparse(J0_I, J0_J, J0_V)
-    for i in 1:num_bus
-        i1 = i
-        i2 = i + num_bus
-        for j in neighbors[i]
-            j1 = j
-            j2 = j + num_bus
-            bus_type = data["bus"]["$(j)"]["bus_type"]
-            if bus_type == 1
-                if i == j
-                    y_ii = Y[i,i]
-                    J[i1, j1] =                      + vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
-                    J[i1, j2] = + 2*real(y_ii)*vm[i] +         sum(  real(Y[i,k]) * vm[k] * cos(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * sin(va[i] - va[k]) for k in neighbors[i] if k != i )
-                    J[i2, j1] =                        vm[i] * sum(  real(Y[i,k]) * vm[k] * cos(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * sin(va[i] - va[k]) for k in neighbors[i] if k != i )
-                    J[i2, j2] = - 2*imag(y_ii)*vm[i] +         sum(  real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) - imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
-                else
-                    y_ij = Y[i,j]
-                    J[i1, j1] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
-                    J[i1, j2] =         vm[i] * (  real(y_ij) * cos(va[i] - va[j]) + imag(y_ij) * sin(va[i] - va[j]) )
-                    J[i2, j1] = vm[i] * vm[j] * ( -real(y_ij) * cos(va[i] - va[j]) - imag(y_ij) * sin(va[i] - va[j]) )
-                    J[i2, j2] =         vm[i] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
-                end
-            elseif bus_type == 2
-                if i == j
-                    J[i1, j1] = vm[i] * sum( -real(Y[i,k]) * vm[k] * sin(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * cos(va[i] - va[k]) for k in neighbors[i] if k != i )
-                    J[i1, j2] = 0.0
-                    J[i2, j1] = vm[i] * sum(  real(Y[i,k]) * vm[k] * cos(va[i] - va[k]) + imag(Y[i,k]) * vm[k] * sin(va[i] - va[k]) for k in neighbors[i] if k != i )
-                    J[i2, j2] = 1.0
-                else
-                    y_ij = Y[i,j]
-                    J[i1, j1] = vm[i] * vm[j] * (  real(y_ij) * sin(va[i] - va[j]) - imag(y_ij) * cos(va[i] - va[j]) )
-                    J[i1, j2] = 0.0
-                    J[i2, j1] = vm[i] * vm[j] * ( -real(y_ij) * cos(va[i] - va[j]) - imag(y_ij) * sin(va[i] - va[j]) )
-                    J[i2, j2] = 0.0
-                end
-            elseif bus_type == 3
-                if i == j
-                    J[i1, j1] = 1.0
-                    J[i1, j2] = 0.0
-                    J[i2, j1] = 0.0
-                    J[i2, j2] = 1.0
-                end
-            else
-                @assert false
-            end
-        end
-    end
-    return J
-end

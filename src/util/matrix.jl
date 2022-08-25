@@ -1,3 +1,6 @@
+const DEFAULT_COND_TOL = 1e6
+using LinearAlgebra
+
 """
 Checks if a matrix M is positive definite
 """
@@ -12,8 +15,13 @@ isnsd(M,ϵ=1e-12) = all([real(eig)<=ϵ for eig in eigvals(M)])
 """
 Checks if a matrix M is invertible
 """
-isinvertible(x) = applicable(inv, x)
+# function isinvertible(M::Matrix; cond_tol::Number=DEFAULT_COND_TOL)
+#     return issquare(M) && cond(M) < cond_tol
+# end
 
+function isinvertible(M::Matrix)
+    return 0 ∉ eigvals(M)
+end
 """
 Returns distance between M and M transpose
 """

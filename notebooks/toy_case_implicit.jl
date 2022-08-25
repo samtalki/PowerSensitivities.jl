@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.2
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -10,6 +10,7 @@ begin
 	using PowerModels
 	using ForwardDiff
 	using ImplicitEquations
+	using DualNumbers
 	using LaTeXStrings
 	using Plots
 end
@@ -32,6 +33,142 @@ begin
 	pf(s) = cos.(angle.(s))
 end
 
+# ╔═╡ 25e96658-9618-4ae3-a600-e24d611a9c4d
+md"""
+##### LaTeX
+Cells can contain $\LaTeX$ math code: $\int_0^1 sin(π ξ) dξ$. Just surround
+it by \$ symbols as in usual $\LaTeX$ texts or by double backtics: ``\int_0^1 sin(π ξ) dξ``.
+The later method is safer as it does not collide with string interpolation (explained below).
+"""
+
+
+# ╔═╡ 432d17be-c41e-4a30-ae77-ce8be08e8245
+md"""
+The matrix $\mathbf{K}(p;\alpha)=\operatorname{diag}(k(p;\alpha))$ is defined as
+$K_{ii} =  \frac{1}{\alpha_i}\sqrt{1 - α_i^2} p_i$. Recall that we have that 
+
+$\huge{
+
+f : \mathbb{C} \to \mathbb{R}
+
+}$
+
+$\implies \Large{
+
+\nabla f(z) = 2 \frac{\partial f(z)}{\partial z^*} = 
+\frac{\partial f(z)}{\partial \Re(z)} + j \frac{\partial f(z) }{\partial \Im(z) } \in \mathbb{C}
+
+}$
+
+"""
+
+# ╔═╡ d1584476-bb54-4d3f-bcf1-635c4e8d9eae
+begin
+	dv(p,α) = Dual.(p,α)
+	function dv(s)
+		p,q = real.(s),imag(s)
+		return Dual.(p,q)
+	end
+	#let ξᵢ = pᵢ + j αᵢ be the reactive power at bus i given a power factor.
+	ξ(p,α) = Dual.(p,α)
+	#p(q,α) = Dual.(p,α)
+	
+	#k function
+	#k(α::Vector) = diagm([sqrt(1-αᵢ^2)/(αᵢ) for αᵢ in α])
+	#k(α) = sqrt(1-α²)/α
+	
+end
+
+
+# ╔═╡ 291f3d2e-19be-4a1a-b94f-790715d6966d
+begin 
+	Δx(p,q) = Dual.(p,q)
+	#Δv(Δx;s::SensitivityModel) = s.∂vp*realpart(Δx) + s.∂vq*dualpart(Δx)
+end
+
+# ╔═╡ c537f4b3-fdb4-44e2-8b7c-73867de55ba9
+begin
+	abstract type Sensitivities end
+	abstract type VoltageSensitivities <: Sensitivities end
+	abstract type CurrentSensitivities <: Sensitivities end
+	abstract type TapChangeSensitivities <: VoltageSensitivities end
+	
+
+struct VoltagePhasorSensitivities <: VoltageSensitivities
+	p::AbstractMatrix #Voltage phasor - active power sensitivities
+	q::AbstractMatrix	#voltage phasor- reactive power sensitiviies
+end
+
+struct VoltageMagnitudeSensitivities <: VoltageSensitivities
+	p::AbstractMatrix
+	q::AbstractMatrix
+end
+end
+
+# ╔═╡ 9c3873ff-d841-44c9-b8f6-445da8ee2321
+begin
+
+	
+	#--- Voltage phasor sensitivities
+	
+	function calc_vf_sensitivities(data::Dict{String,<:Any})
+		compute_ac_pf!(data)
+		Y = calc_basic_admittance_matrix(data)
+		v,s = calc_basic_bus_voltage(data),calc_basic_bus_injection(data)
+		p,q = real.(s),imag.(s)
+		return calc_vf_sensitivites(Y,v)
+	end
+	function calc_vf_sensitivites(Y::AbstractMatrix,vf::AbstractArray)
+		n = size(Y,1)
+		B = [diagm(ones(n)) zeros((n,n));
+			zeros((n,n)) -diagm(ones(n))*im] 
+		A = Y * [diagm(conj.(vf)) diagm(vf);
+				iagm(vf) diagm(conj.(vpn))] 
+		#B = X A
+		X = B * inv(A)
+		Xre = X[:,1:n]
+		#non-conj phasor voltage sensitivities
+		∂vf∂p, ∂vf∂q = Xre[1:n,1:n],Xre[n+1:end,n+1:end] 
+		return VoltagePhasorSensitivities(∂vf∂p,∂vf∂q) 
+	end
+	
+
+end
+
+
+# ╔═╡ efe37de8-8370-4a4e-98ec-7d427dfbd2e9
+begin
+	#--- Voltage magnitude sensitivities
+	
+	function calc_vmag_sensitivities(data::Dict{String,<:Any})
+		compute_ac_pf!(data)
+		Y = calc_basic_admittance_matrix(data)
+		v,s = calc_basic_bus_voltage(data),calc_basic_bus_injection(data)
+		p,q = real.(s) , imag.(s)
+		return calc_vmag_sensitivities(Y,v)
+	end
+	function calc_vmag_sensitivities(Y::AbstractMatrix,vf::AbstractArray)
+		∂vf∂p,∂vf∂q = calc_vf_sensitivites(Y,vf)
+		return calc_vmag_sensitivities(∂vf∂p,∂vf∂q) 
+	end
+	function calc_vmag_sensitivities(∂vf::VoltagePhasorSensitivities)
+		return calc_vmag_sensitivities(∂vf.p,∂vf.q)
+	end
+	function calc_vmag_sensitivities(∂vf∂p,∂vf∂q)
+		@assert size(∂vf∂p,1) == size(∂vf∂q,1) "Mistmatch in phasor voltage sensitivity dimensionality"
+		n = size(∂vf∂p,1)
+		∂vp,∂vq = zeros((n,n)), zeros((n,n)) #Voltage magnitude sensitivities
+		for (i,(dvfp_i,dvfq_i)) in enumerate(zip(eachrow(∂vf∂p),eachrow(∂vf∂q)))
+			∂vp[i,:] = 1/(abs(vf[i])) .* real.(conj(vf[i]) .* dvfp_i)
+			∂vq[i,:] = 1/(abs(vf[i])) .* real.(conj(vf[i]) .* dvfq_i)
+		end
+		return VoltageMagnitudeSensitivities(∂vp,∂vq)
+	end
+end
+
+# ╔═╡ 13aaa85a-fec8-4380-be0e-22fe14f4648d
+
+
 # ╔═╡ a40a7c3b-6a8a-4db6-bdd3-2c86a9fbb57b
 begin
 	"""Generic and signed implicit representation of reactive power"""
@@ -52,15 +189,24 @@ begin
 	plot(dpf)
 end
 
-# ╔═╡ ea33e997-0ec4-451f-af77-450fd12a382c
 
+# ╔═╡ ea33e997-0ec4-451f-af77-450fd12a382c
+begin
+	k_inv(alpha) = alpha ./ (sqrt.(1 .- alpha.^2))
+	p(alpha,q) = k_inv.(alpha) .* q
+	pfs_test = 0:0.001:1
+	qs = [1 5 15 20 30 40 60 80]
+	#p_data = [p(q,pfs_test) for q in qs]
+	p_data = [p(pfs_test,qs[1]) p(pfs_test,qs[2]) p(pfs_test,qs[3]) p(pfs_test,qs[4]) p(pfs_test,qs[5]) p(pfs_test,qs[6]) p(pfs_test,qs[7]) p(pfs_test,qs[8])]
+	
+end
 
 # ╔═╡ 35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
 begin
 	#Range of power factors
-	α = -1:0.001:1
-	ps = [1 5 15 20 30 40 60 80]
-	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5]) q(α,ps[6]) q(α,ps[7]) q(α,ps[8])]
+	α = 0:0.001:1
+	ps = [1 5 15 20 30 40 60 80 100]
+	data = [q(α,ps[1]) q(α,ps[2]) q(α,ps[3]) q(α,ps[4]) q(α,ps[5]) q(α,ps[6]) q(α,ps[7]) q(α,ps[8]) q(α,ps[9])]
 	capacitive = -1 .* data
 	#labels = [string(p_i) for p_i in ps]
 	#Inductive Plot
@@ -68,7 +214,7 @@ begin
 		α,
 		data,
 		ylims=(-100,100),
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Greens, 10),
 		colorbar=:legend,
 		label=["" "" "" "" "" "" "" L"$q_i > 0$"],
@@ -82,7 +228,31 @@ begin
 		capacitive,
 		ylims=(-100,100),
 		#ls=:dash,
-		color=[3 4 5 6 7 8 9 10 11],
+		color=[3 4 5 6 7 8 9 10 11 12],
+		color_palette = palette(:Oranges, 10),
+		label=["" "" "" "" "" "" "" L"$q_i < 0$"],
+		#legend_title=L"$p_i$ (kW) Inductive",
+		#legend_title_font_pointsize=9,
+	)
+
+	plot!(
+		pfs_test,
+		p_data,
+		ylims=(-100,100),
+		color=[3 4 5 6 7 8 9 10 11 12],
+		color_palette = palette(:Greens, 10),
+		colorbar=:legend,
+		label=["" "" "" "" "" "" "" L"$q_i > 0$"],
+		legend_position=:bottomright,
+		#legend_title=L"$p_i$ (kW) Capacitive",
+		#legend_title_font_pointsize=9,
+		ylabel=L"Power $p_i$ or $q_i$ (kW or kVAR)",
+	)
+	plot!(pfs_test,
+		-1 .* p_data,
+		ylims=(-100,100),
+		#ls=:dash,
+		color=[3 4 5 6 7 8 9 10 11 12],
 		color_palette = palette(:Oranges, 10),
 		label=["" "" "" "" "" "" "" L"$q_i < 0$"],
 		#legend_title=L"$p_i$ (kW) Inductive",
@@ -94,22 +264,165 @@ begin
 	title!(L"$q(\alpha_i) = k(\alpha_i) p_i = \pm \frac{p_i}{\alpha_i} \sqrt{1- \alpha_i^2} $")
 	xlabel!("Power Factor "*L"\alpha_i")
 	#ylabel!(L"Reactive Power $q_i$ (kVAR)")
-	savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/beautiful_implicit_representation_cap_ind.pdf")
+	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/beautiful_implicit_representation_cap_ind.pdf")
 end
+
+
+# ╔═╡ 2cfc05e3-c5de-480f-a029-e6713d0e0222
 
 
 # ╔═╡ f5394f0b-f02e-4251-8f4e-f1099f9c4e52
-["" "" "" L"$q_i < 0$"]
+begin
+
+#q>0
+plot_clean=plot(
+		α,
+		data,
+		ylims=(-100,100),
+		color=[3 4 5 6 7 8 9 10 11 12],
+		color_palette = palette(:Greens, 10),
+		colorbar=:legend,
+		label=["" "" "" "" "" "" "" L"$q > 0$ (kVAR)"],
+		legend_position=:bottomright,
+		ylabel=L"Reactive Power $q$ (kVAR)",
+		legend=false
+		#xlims=[0,1]
+	)
+	# #Cq_i<0
+	plot!(α,
+		capacitive,
+		ylims=(-100,100),
+		ls=:dash,
+		color=[3 4 5 6 7 8 9 10 11 12],
+		color_palette = palette(:Greens, 10),
+		label=["" "" "" "" "" "" "" L"$q < 0$ (kVAR)"],
+		legend=false
+	)
+#p>0
+	plot!(
+			pfs_test,
+			p_data,
+			ylims=(-100,100),
+			color=[3 4 5 6 7 8 9 10 11 12],
+			color_palette = palette(:Oranges, 10),
+			colorbar=:legend,
+			label=["" "" "" "" "" "" "" L"$p > 0$ (kW)"],
+			legend_position=:bottomright,
+			legend=false
+		)
+#p<0
+		plot!(pfs_test,
+			-1 .* p_data,
+			ylims=(-100,100),
+			ls=:dash,
+			color=[3 4 5 6 7 8 9 10 11 12],
+			color_palette = palette(:Oranges, 10),
+			label=["" "" "" "" "" "" "" L"$p < 0$ (kW)"],
+			legend=false
+		)
+	xlabel!(L"Power factor $\alpha$")
+	ylabel!(L"Power $p,q$ (kW,kVAR)")
+	#title!(L"$q(\alpha|p)$, $p(\alpha|q)$")
+	
+	#title!(L"q(p|\alpha) = K(\alpha) p, \quad p(q|\alpha) = K^{-1}(\alpha) q")
+	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend_r2.pdf")
+	#savefig(plot_clean,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/implicit_K_K_inv_unit_legend_r2.png")
+	
+end
+
+# ╔═╡ a5954d2b-6f96-4c4a-9bf4-5039dd960039
+
 
 # ╔═╡ 28c24fd0-1375-4763-856f-fab3c496ea86
 begin
-	pfs = LinRange(0, 1, 100)
-	pobs = LinRange(0, 10, 100)
-	qobs = LinRange(0,10,100)
-	#qs = [q(pf_k,p_k) for pf_k in pfs, p_k in pobs]
-	co = contourf(pfs, qobs, pobs,
-	    extendlow = :cyan, extendhigh = :magenta)
+	p1 = plot(
+		α,
+		data,
+		ylims=(-100,100),
+		color=[3 4 5 6 7 8 9 10 11 12],
+		color_palette = palette(:Greens, 10),
+		colorbar=:legend,
+		#label=["" "" "" "" "" "" "" L"$q_i > 0$ (kVAR)"],
+		label=["" "" "" "" "" "" "" L"$q > 0$ (Capacitive)"],
+		#legend_position=:bottomright,
+		title=L"$\pm p  \ \alpha^{-1} (1- \alpha^2)^{\frac{1}{2}}$",
+		ylabel=L"Reactive $q$ (kVAR)",
+		legend=:bottomright
+	)
+	# #Cq_i<0
+	plot!(α,
+		capacitive,
+		ylims=(-100,100),
+		ls=:dash,
+		color=[3 4 5 6 7 8 9 10 11 12],
+		color_palette = palette(:Greens, 10),
+		#label=["" "" "" "" "" "" "" L"$q_i < 0$ (kVAR)"],
+		label=["" "" "" "" "" "" "" L"$q < 0$ (Inductive)"],
+		legend=:bottomright
+	)
+#p>0
+	p2= plot(
+			pfs_test,
+			p_data,
+			ylims=(-100,100),
+			color=[3 4 5 6 7 8 9 10 11 12],
+			color_palette = palette(:Oranges, 10),
+			colorbar=:legend,
+			#label=["" "" "" "" "" "" "" L"$q_i > 0$"],
+			label=["" "" "" "" "" "" "" L"$p > 0$ (Generating)"],
+			legend_position=:bottomleft,
+
+			title=L"$\pm q \  \alpha (1- \alpha^2)^{-\frac{1}{2}}$",
+
+			ylabel=L"Active $p$ (kW)",
+		)
+#p<0
+		plot!(pfs_test,
+			-1 .* p_data,
+			ylims=(-100,100),
+			ls=:dash,
+			color=[3 4 5 6 7 8 9 10 11 12],
+			color_palette = palette(:Oranges, 10),
+			#label=["" "" "" "" "" "" "" L"$q < 0$"],
+			label=["" "" "" "" "" "" "" L"$p < 0$ (Absorbing)"],
+		)
+
+#Middle plot
+	#pmid = plot(p1,p2)
+
+	plt= plot(
+		p1,p2,
+		#legend=false,
+	)
+	#title!("Graphical Power Factor")
+	xlabel!(L"Power factor $\alpha$")
+	#savefig(plt,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/subplot_K_matrix_r2.pdf")
+	#savefig(plt,"/home/sam/github/PowerSensitivities.jl/figures/spring_22/subplot_K_matrix_r2.png")
 end
+
+# ╔═╡ ed9f8e36-3d27-444e-99a2-b563e1c7f8b8
+begin
+	l = @layout [a b ; c]
+	threeway_plot = plot(
+		p1,p2,plot_clean,
+		layout=l,
+		#size=()
+	)
+	xlabel!(L"Power Factor $\alpha$")
+	plot!(
+		size=(600,371),
+		#foreground_color_legend = nothing
+		#bottom_margin=9Plots.mm,
+		#left_margin=9Plots.mm
+	
+	)
+	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/threeway_plot.pdf")
+	#savefig("/home/sam/github/PowerSensitivities.jl/figures/spring_22/threeway_plot.png")
+end
+
+
+
+# ╔═╡ 7f314bac-db2c-499a-9616-9dcf49aae961
 
 
 # ╔═╡ ac48dadf-533f-4178-b99b-b4d6395dc80d
@@ -148,6 +461,7 @@ curves([1,2,3,4],[1,1,2,4])
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 ImplicitEquations = "95701278-4526-5785-aba3-513cca398f19"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -156,6 +470,7 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 
 [compat]
+DualNumbers = "~0.6.8"
 ForwardDiff = "~0.10.25"
 ImplicitEquations = "~1.0.7"
 LaTeXStrings = "~1.3.0"
@@ -167,7 +482,7 @@ PowerModels = "~0.19.5"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.7.2"
+julia_version = "1.7.3"
 manifest_format = "2.0"
 
 [[deps.Adapt]]
@@ -349,8 +664,14 @@ uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.8.6"
 
 [[deps.Downloads]]
-deps = ["ArgTools", "LibCURL", "NetworkOptions"]
+deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+
+[[deps.DualNumbers]]
+deps = ["Calculus", "NaNMath", "SpecialFunctions"]
+git-tree-sha1 = "5837a837389fccf076445fce071c8ddaea35a566"
+uuid = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+version = "0.6.8"
 
 [[deps.EarCut_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -386,6 +707,9 @@ deps = ["ErrorfreeArithmetic", "LinearAlgebra"]
 git-tree-sha1 = "6344aa18f654196be82e62816935225b3b9abe44"
 uuid = "fa42c844-2597-5d31-933b-ebd51ab2693f"
 version = "0.3.1"
+
+[[deps.FileWatching]]
+uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[deps.FiniteDiff]]
 deps = ["ArrayInterface", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays"]
@@ -1259,16 +1583,28 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═8b2c4808-62fd-42a9-9f82-1d9bf7f304d0
+# ╟─8b2c4808-62fd-42a9-9f82-1d9bf7f304d0
 # ╠═bf7c122a-a2e7-11ec-3063-0bcff1909553
 # ╠═89ea0207-c19d-4448-a02b-d16d38b6aff5
+# ╠═25e96658-9618-4ae3-a600-e24d611a9c4d
+# ╠═432d17be-c41e-4a30-ae77-ce8be08e8245
+# ╠═d1584476-bb54-4d3f-bcf1-635c4e8d9eae
+# ╠═291f3d2e-19be-4a1a-b94f-790715d6966d
+# ╠═c537f4b3-fdb4-44e2-8b7c-73867de55ba9
+# ╠═9c3873ff-d841-44c9-b8f6-445da8ee2321
+# ╠═efe37de8-8370-4a4e-98ec-7d427dfbd2e9
+# ╠═13aaa85a-fec8-4380-be0e-22fe14f4648d
 # ╠═a40a7c3b-6a8a-4db6-bdd3-2c86a9fbb57b
 # ╠═6c187b3a-a13f-49fc-8acd-f4df10be683b
 # ╠═ddcfa7d4-ff56-4835-8822-d2fb9fc622e9
 # ╠═ea33e997-0ec4-451f-af77-450fd12a382c
 # ╠═35bce20d-eb77-40b6-91ff-cafc9b4a9b3d
+# ╠═2cfc05e3-c5de-480f-a029-e6713d0e0222
 # ╠═f5394f0b-f02e-4251-8f4e-f1099f9c4e52
+# ╠═a5954d2b-6f96-4c4a-9bf4-5039dd960039
 # ╠═28c24fd0-1375-4763-856f-fab3c496ea86
+# ╠═ed9f8e36-3d27-444e-99a2-b563e1c7f8b8
+# ╠═7f314bac-db2c-499a-9616-9dcf49aae961
 # ╠═ac48dadf-533f-4178-b99b-b4d6395dc80d
 # ╠═111218b9-05f9-47c4-9467-17f38fc4e012
 # ╠═2bdb4883-577b-4958-a160-75e5c96a8505
