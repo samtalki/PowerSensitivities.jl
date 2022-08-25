@@ -26,36 +26,39 @@ function plot_spectral_analysis(net::Dict{String,<:Any})
     @assert length(svp_spec.scuml) == length(svq_spec.scuml) == length(idx)
     
     #Plot the cummulative singular values of the submatrices
-    plt_cuml = plot(
+    #dvdp plot
+    plt_svp = plot(
         idx,svp_spec.scuml,
-        ls=:dash,
-        ylabel="Cummulative Normalized",
+        ls=:dashdot,
+        ylabel="Value",
         xlabel="Singular Value",
-        label=false,
+        label="Cummulative Normalized",
         #label=L"\frac{\partial v}{\partial p} "*name
     )
     plot!(
-        idx,svq_spec.scuml,
-        ls=:dash,
-        ylabel="Cummulative Normalized",
-        xlabel="Singular Value",
-        label=false,
-        #label=L"\frac{\partial v}{\partial q} "*name
-    )
-    plt_norm = plot(
         idx,svp_spec.snorm,
-        ls=:dashdot,
-        ylabel="Normalized",
+        ls=:dash,
+        ylabel="Value",
         xlabel="Singular Value",
-        label=L"\frac{\partial v}{\partial p} \ "*name
-        )
-    plot!(idx,svq_spec.snorm,
-        ls=:dashdot,
-        ylabel="Normalized",
-        xlabel="Singular Value",
-        label=L"\frac{\partial v}{\partial q} \ "*name
+        label="Normalized",
+        title=L"\frac{\partial v}{\partial q} "*name
     )
-    return plot(plt_cuml,plt_norm)
+    plt_svq = plot(
+        idx,svq_spec.snorm,
+        ls=:dashdot,
+        ylabel="Value",
+        xlabel="Singular Value",
+        label="Normalized",
+        #label=L"\frac{\partial v}{\partial p} \ "*name
+        )
+    plot!(idx,svq_spec.scuml,
+        ls=:dashdot,
+        ylabel="Value",
+        xlabel="Singular Value",
+        label="Cummulative Normalized",
+        title=L"\frac{\partial v}{\partial q} \ "*name
+    )
+    return plot(plt_svp,plt_svq)
 end
 
 """
