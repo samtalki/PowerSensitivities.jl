@@ -21,6 +21,7 @@ include("sens/angles.jl")
 include("core/power_factor.jl")
 include("core/jacobian_matrix.jl")
 include("core/spectral_analysis.jl")
+include("core/ph_obs.jl")
 
 #Data utilities
 include("util/network.jl")
@@ -51,7 +52,7 @@ export set_network_load,is_radial
 export calc_basic_power_factor
 export calc_K_matrix, calc_M_matrix
 export calc_delta_k, calc_delta_k_max, calc_max_pf_distance
-export calc_vmag_condition
+export calc_vmag_condition 
 
 #--- Matrix utilities
 export ispd,isnd,isnsd,isinvertible,symmetricdiff,symmetric_part_nd,symmetric_part_nsd,symmetric_part_pd

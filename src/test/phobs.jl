@@ -10,14 +10,6 @@ using Plots
 using LaTeXStrings
 import .PowerSensitivities
 
-# function is_pos_def(A::AbstractMatrix)
-# 	#Hermitian part test for positive definitineness of real/complex matrices
-# 	Aherm = (1/2)*(A + conj(transpose(A))
-# 		)
-# 	return eigmin(Aherm) > 0
-# end
-
-
 struct ObservabilityData
 	eigmin_A::Union{Real,Complex}
 	eigmin_B::Union{Real,Complex}
@@ -28,6 +20,7 @@ struct ObservabilityData
 	vq::AbstractMatrix
 	observable::Bool
 end
+
 
 function calc_thm2_data(data::Dict,sel_bus_types=[1])
 	K = PowerSensitivities.calc_K_matrix(data)

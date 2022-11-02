@@ -61,11 +61,23 @@ Implicit function theorem representation of reactive power.
 kinv(β::Real) = β>0 ? sqrt(1/(k(β)^2 + 1)) : NaN
 kinv(network::Dict{String,<:Any}) = [k_inv(pf) for pf in calc_basic_power_factor(network)] #Given a network data dict, compute vector of inverse representations
 
+
+"""
+Given a basic network data dict, returns the capacitive/inductive state of every net injection
+"""
+function calc_quadrant(network::Dict{String,<:Any})
+    s = calc_basic_bus_injection(network)
+    q = imag.(s)
+    ξ = sign.(q)
+    return ξ     
+end
+
 """
 Compute K matrix where K = diag(√(1-pf_i^2)/pf_i)
 """
 function calc_K_matrix(network::Dict{String,<:Any},ϵ=1e-6)
     bad_idx = calc_bad_idx(network,ϵ) #Array of indeces with zero p or zero MVA injections to be discarded
+    ξ = calc_quadrant(network)
     pf = calc_basic_power_factor(network) 
     n = length(pf)
     K = zeros((n,n))
@@ -76,7 +88,7 @@ function calc_K_matrix(network::Dict{String,<:Any},ϵ=1e-6)
     for i in bad_idx
         K[i,i] = k_mean ## Replace k entry at bad idx with the mean of other ks.
     end
-    return K
+    return K * Diagonal(ξ)
 end
 
 """
