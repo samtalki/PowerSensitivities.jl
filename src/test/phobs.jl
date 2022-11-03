@@ -21,11 +21,15 @@ struct ObservabilityData
 	observable::Bool
 end
 
-
+"""
+Given a basic network data dict and a selected bus type (default PQ), compute the results of Theorem 2 from Talkington and Turizo, et al.
+"""
 function calc_thm2_data(data::Dict,sel_bus_types=[1])
+	#Power factor encoding matrix
 	K = PowerSensitivities.calc_K_matrix(data)
 	pf = PowerSensitivities.calc_basic_power_factor(data)
 	S = PowerSensitivities.calc_voltage_sensitivity_matrix(data)
+	
 	#dimensionality setup
 	bus_idx_sel_type = PowerSensitivities.calc_bus_idx_of_type(data,sel_bus_types)
 	n_bus_sel_type = length(bus_idx_sel_type)
