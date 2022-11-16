@@ -2,7 +2,7 @@
 ### Plot the gershdics for a PowerModels.jl Network.
 using PowerModels
 using LinearAlgebra
-using Plots, LaTeXStrings
+using Plots, LaTeXStrings,ColorSchemes
 include("../PowerSensitivities.jl")
 import .PowerSensitivities
 
@@ -41,7 +41,7 @@ function test_∂θ_computation(data,sel_bus_types=[1],solve_ac_opf=true)
 end
 
 #--- Experiment paths and networks under study
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/pm_matpower/case9.m"
+network_data_path = "/home/sam/github/PowerSensitivities.jl/data/pm_matpower/case14.m"
 figure_path = "/home/sam/github/PowerSensitivities.jl/figures/fall_22/"
 sel_bus_types = [1] #Selected bus types
 
@@ -55,25 +55,40 @@ ys = ["2" "3"]
 
 hp = heatmap(
 	results["pth"],
-	title=L"$\frac{\partial p}{\partial \theta}$ (At Power Flow Sol.)"
+	title=L"$\frac{\partial p}{\partial \theta}$ (At power flow sol.)",
+	c=:curl,
+	ylabel="Bus index",
 	)
 hq = heatmap(
 	results["qth"],
-	title=L"$\frac{\partial q}{\partial \theta}$ (At Power Flow Sol.)",
+	title=L"$\frac{\partial q}{\partial \theta}$ (At power flow sol.)",
+	c=:curl,
+	
 	)
 hat_hp = heatmap(
 	results["hat_pth"],
-	title=L"$\frac{\partial p}{\partial \theta}$ ($\theta$-Free  Expression)"
-)
+	title=L"$\frac{\partial p}{\partial \theta}$ ($\theta$-free expression)",
+	c=:curl,
+	xlabel="Bus index",
+	ylabel="Bus index",
+	)
 hat_hq = heatmap(
 	results["hat_qth"],
-	title=L"$\frac{\partial q}{\partial \theta}$ ($\theta$-Free Expression)"	
+	title=L"$\frac{\partial q}{\partial \theta}$ ($\theta$-free expression)",
+	c=:curl,
+	xlabel="Bus index",
 )
 fig = plot(
 	hp,hq,hat_hp,hat_hq,
-	xlabel="Bus Index",
-	ylabel="Bus Index"
+	titlefontsize=11,
+	tickfontsize=6,
+	labelfontsize=10,
+	grid=true,
+	cb=:best
 )
 
-savefig(fig,figure_path*"phase_angle_blocks.pdf")
+savefig(fig,figure_path*"phase_angle_blocks_case14.pdf")
+
+discs = PowerSensitivities.plot_gershdisc(data)
+savefig(discs,figure_path*"discs_case14.pdf")
 

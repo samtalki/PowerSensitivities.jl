@@ -1,4 +1,4 @@
-using Plots,LaTeXStrings
+using Plots,LaTeXStrings,ColorSchemes
 """
 Given a matrix A and integer i, return the elements A[i,k] for all k not equal to i
 """
@@ -61,7 +61,7 @@ end
 Given a basic network data dict, plot the gershdiscs
 """
 function plot_gershdisc(network::Dict;row_disc=true,col_disc=true,npts=500)
-    J = calc_jacobian_matrix(network,[1,2])
+    J = Matrix(calc_jacobian_matrix(network,[1,2]).matrix)
     return plot_gershdisc(J,row_disc=row_disc,col_disc=col_disc,npts=npts)
 end
 

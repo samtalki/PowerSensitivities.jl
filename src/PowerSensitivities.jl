@@ -63,4 +63,6 @@ export ispd,isnd,isnsd,isinvertible,symmetricdiff,symmetric_part_nd,symmetric_pa
 export calc_bus_idx_of_type,calc_bad_idx,calc_study_idx
 export calc_net_capacitive_idx,calc_net_inductive_idx
 
+#--- Gershdisc utilities
+export plot_gershdisc
 end
