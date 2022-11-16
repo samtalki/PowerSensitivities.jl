@@ -1,8 +1,10 @@
-### Case the angle block recovery problem for a PowerModels.jl Radial Distribution Network.
+### Plot the angle block recovery problem for a PowerModels.jl Network.
+### Plot the gershdics for a PowerModels.jl Network.
 using PowerModels
 using LinearAlgebra
-using PowerSensitivities
 using Plots, LaTeXStrings
+include("../PowerSensitivities.jl")
+import .PowerSensitivities
 
 function test_∂θ_computation(data,sel_bus_types=[1],solve_ac_opf=true)
 	"""
@@ -14,7 +16,7 @@ function test_∂θ_computation(data,sel_bus_types=[1],solve_ac_opf=true)
 	end
 
 	#Calculate bus indeces of type selected
-	sel_idx = calc_bus_idx_of_type(data,sel_bus_types)
+	sel_idx = PowerSensitivities.calc_bus_idx_of_type(data,sel_bus_types)
 
 	#Get state vectors
 	s,v = calc_basic_bus_injection(data),calc_basic_bus_voltage(data)
@@ -22,25 +24,25 @@ function test_∂θ_computation(data,sel_bus_types=[1],solve_ac_opf=true)
 	vmag = abs.(v)
 
 	#Compute the Jacobian and pull out submatrices
-	J = calc_jacobian_matrix(data)
+	J = PowerSensitivities.calc_jacobian_matrix(data)
 	∂pθ,∂qθ,∂pv,∂qv = J.pth,J.qth,J.pv,J.qv
 
 	#Calculate the angle blocks from the submatrices
-	hat_∂pθ,hat_∂qθ = calc_pth_jacobian(∂qv,vmag,p),calc_qth_jacobian(∂pv,vmag,q)
+	hat_∂pθ,hat_∂qθ = PowerSensitivities.calc_pth_jacobian(∂qv,vmag,p),PowerSensitivities.calc_qth_jacobian(∂pv,vmag,q)
 
 	return Dict(
-		"pth" => ∂pθ[sel_idx,sel_idx],
-		"qth" => ∂qθ[sel_idx,sel_idx],
-		"hat_pth" => hat_∂pθ[sel_idx,sel_idx],
-		"hat_qth" => hat_∂qθ[sel_idx,sel_idx],
-		"diff_pth" => abs.(∂pθ - hat_∂pθ)[sel_idx,sel_idx],
-		"diff_qth" => abs.(∂qθ - hat_∂qθ)[sel_idx,sel_idx]
+		"pth" => Matrix(∂pθ[sel_idx,sel_idx]),
+		"qth" => Matrix(∂qθ[sel_idx,sel_idx]),
+		"hat_pth" => Matrix(hat_∂pθ[sel_idx,sel_idx]),
+		"hat_qth" => Matrix(hat_∂qθ[sel_idx,sel_idx]),
+		"diff_pth" => Matrix(abs.(∂pθ - hat_∂pθ)[sel_idx,sel_idx]),
+		"diff_qth" => Matrix(abs.(∂qθ - hat_∂qθ)[sel_idx,sel_idx])
 		)
 end
 
 #--- Experiment paths and networks under study
-network_data_path = "/home/sam/github/PowerSensitivities.jl/data/radial_test/case4_dist.m"
-figure_path = "/home/sam/github/PowerSensitivities.jl/figures/spring_22/"
+network_data_path = "/home/sam/github/PowerSensitivities.jl/data/pm_matpower/case9.m"
+figure_path = "/home/sam/github/PowerSensitivities.jl/figures/fall_22/"
 sel_bus_types = [1] #Selected bus types
 
 #--- Start experiment
@@ -53,15 +55,25 @@ ys = ["2" "3"]
 
 hp = heatmap(
 	results["pth"],
-	#title=L"\frac{\partial \boldsymbol{v}}{\partial \boldysmbol{\theta}}"
+	title=L"$\frac{\partial p}{\partial \theta}$ (At Power Flow Sol.)"
 	)
 hq = heatmap(
 	results["qth"],
-	#title=L"\frac{\partial \boldsymbol{v}}{\partial \boldsymbol{\theta}}"
+	title=L"$\frac{\partial q}{\partial \theta}$ (At Power Flow Sol.)",
 	)
-hat_hp = heatmap(results["hat_pth"])
-hat_hq = heatmap(results["hat_qth"])
-fig = plot(hp,hq,hat_hp,hat_hq)
+hat_hp = heatmap(
+	results["hat_pth"],
+	title=L"$\frac{\partial p}{\partial \theta}$ ($\theta$-Free  Expression)"
+)
+hat_hq = heatmap(
+	results["hat_qth"],
+	title=L"$\frac{\partial q}{\partial \theta}$ ($\theta$-Free Expression)"	
+)
+fig = plot(
+	hp,hq,hat_hp,hat_hq,
+	xlabel="Bus Index",
+	ylabel="Bus Index"
+)
 
-#savefig(figure_path*"phase_angle_blocks.pdf")
+savefig(fig,figure_path*"phase_angle_blocks.pdf")
 

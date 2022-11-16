@@ -6,6 +6,7 @@ using Statistics
 using LinearAlgebra
 using SparseArrays
 using Flux
+
 PowerModels.silence()
 
 
@@ -22,6 +23,7 @@ include("core/power_factor.jl")
 include("core/jacobian_matrix.jl")
 include("core/spectral_analysis.jl")
 include("core/ph_obs.jl")
+include("core/discs.jl")
 
 #Data utilities
 include("util/network.jl")
