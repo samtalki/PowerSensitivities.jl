@@ -1,21 +1,44 @@
-The goal of this package is to help with differentiating electric power system data and studying the results.
+# PowerSensitivities.jl
+Tools for modeling and analyzing the various Jacobian matrices of electric power networks. 
 
-This package is under development.
 
-## Installation
+This software is under development. It is currently compatible with *basic network models* in [PowerModels.jl](https://github.com/lanl-ansi/PowerModels.jl).
 
-### Clone the repository
+## Setup
+In Julia, run the following
 ```
-git clone --recurse-submodules
-```
-
-### Activate the Julia environment
-```
-pkg> activate .
+import Pkg
+Pkg.add("https://github.com/samtalki/PowerSensitivities.jl.git")
 ```
 
-## Reproducible Research
-We invite you to reproduce the results of our research through the following steps. 
+## Paper and Reproducibility
+
+This package corresponds to our paper:
+
+["Conditions for Estimation of Sensitivities of Voltage Magnitudes to Complex Power Injections", S. Talkington, D. Turizo, S. Grijalva, J. Fernandez, and D. K. Molzahn, arXiv:2212.01471 [eess.SY] 2022.](https://arxiv.org/abs/2212.01471)
+
+If you find the ideas in this package or this paper useful, please consider adding the following citation
+```
+@misc{https://doi.org/10.48550/arxiv.2212.01471,
+  doi = {10.48550/ARXIV.2212.01471},
+  
+  url = {https://arxiv.org/abs/2212.01471},
+  
+  author = {Talkington, Samuel and Turizo, Daniel and Grijalva, Santiago and Fernandez, Jorge and Molzahn, Daniel K.},
+  
+  keywords = {Systems and Control (eess.SY), Optimization and Control (math.OC), FOS: Electrical engineering, electronic engineering, information engineering, FOS: Electrical engineering, electronic engineering, information engineering, FOS: Mathematics, FOS: Mathematics},
+  
+  title = {Conditions for Estimation of Sensitivities of Voltage Magnitudes to Complex Power Injections},
+  
+  publisher = {arXiv},
+  
+  year = {2022},
+  
+  copyright = {Creative Commons Attribution 4.0 International}
+}
+```
+
+The results in this research can be reproduced through the following steps. 
 
 ### Analytical Results (Julia):
 

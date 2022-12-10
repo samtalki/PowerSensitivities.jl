@@ -6,6 +6,7 @@ using Statistics
 using LinearAlgebra
 using SparseArrays
 using Flux
+
 PowerModels.silence()
 
 
@@ -22,6 +23,7 @@ include("core/power_factor.jl")
 include("core/jacobian_matrix.jl")
 include("core/spectral_analysis.jl")
 include("core/ph_obs.jl")
+include("core/discs.jl")
 
 #Data utilities
 include("util/network.jl")
@@ -60,5 +62,8 @@ export ispd,isnd,isnsd,isinvertible,symmetricdiff,symmetric_part_nd,symmetric_pa
 #--- Special bus indexing utilities
 export calc_bus_idx_of_type,calc_bad_idx,calc_study_idx
 export calc_net_capacitive_idx,calc_net_inductive_idx
+
+#--- Gershdisc utilities
+export plot_gershdisc
 
 end
