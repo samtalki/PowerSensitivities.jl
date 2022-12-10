@@ -13,9 +13,9 @@ Pkg.add("https://github.com/samtalki/PowerSensitivities.jl.git")
 
 ## Paper and Reproducibility
 
-This package corresponds to paper "Conditions for Estimation of Sensitivities of Voltage Magnitudes to Complex Power Injections", S. Talkington, D. Turizo, S. Grijalva, J. Fernandez, and D. K. Molzahn, arXiv:2212.01471 [eess.SY] 2022.
+This package corresponds to our paper:
 
-[arxiv preprint](https://arxiv.org/abs/2212.01471)
+["Conditions for Estimation of Sensitivities of Voltage Magnitudes to Complex Power Injections", S. Talkington, D. Turizo, S. Grijalva, J. Fernandez, and D. K. Molzahn, arXiv:2212.01471 [eess.SY] 2022.](https://arxiv.org/abs/2212.01471)
 
 If you find the ideas in this package or this paper useful, please consider adding the following citation
 ```
