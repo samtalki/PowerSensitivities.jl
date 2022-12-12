@@ -5,7 +5,6 @@ using TimeSeries
 using Statistics
 using LinearAlgebra
 using SparseArrays
-using Flux
 
 PowerModels.silence()
 
